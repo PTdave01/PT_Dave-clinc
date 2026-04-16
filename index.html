@@ -2,47 +2,60 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NoT_tHaT_kInD_oF_pHySiO | AI Portal</title>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js"></script>
-    <script src="https://js.paystack.co/v1/inline.js"></script> 
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>PT_Dave AI Clinic</title>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils"></script>
+    <script src="https://js.paystack.co/v1/inline.js"></script>
     <style>
-        body { background-color: #0a0a0a; color: #00ffcc; font-family: 'Courier New', monospace; padding: 20px; text-align: center;}
-        video { display: none; }
-        canvas { border: 2px solid #00ffcc; border-radius: 12px; background: #000; width: 100%; max-width: 500px; height: auto;}
-        .panel { background: #1a1a1a; padding: 20px; border-radius: 12px; margin-top: 20px; text-align: left; max-width: 500px; margin-left: auto; margin-right: auto;}
-        button { padding: 15px; width: 100%; background: #00ffcc; color: #000; border: none; font-weight: bold; cursor: pointer; border-radius: 5px; font-size: 16px; margin-top: 15px;}
-        input[type="email"] { width: 92%; padding: 12px; margin-bottom: 15px; background: #333; border: 1px solid #444; color: #fff; border-radius: 5px;}
-        .metric { font-size: 1.2rem; margin: 10px 0; color: #fff; }
+        body { font-family: -apple-system, sans-serif; text-align: center; background: #121212; color: white; margin: 0; padding: 20px; }
+        .container { max-width: 500px; margin: auto; }
+        #canvas_container { position: relative; width: 100%; border-radius: 15px; overflow: hidden; background: #000; aspect-ratio: 4/3; }
+        canvas { width: 100%; height: 100%; }
+        .stats { background: #1e1e1e; padding: 15px; border-radius: 10px; margin-top: 10px; border: 1px solid #333; }
+        input, button { width: 100%; padding: 15px; margin: 10px 0; border-radius: 8px; border: none; font-size: 16px; box-sizing: border-box; }
+        input { background: #222; color: white; border: 1px solid #444; }
+        button { background: #00ff88; color: black; font-weight: bold; cursor: pointer; }
+        #server_response { color: #00ff88; font-size: 14px; margin-top: 10px; min-height: 1.2em; }
     </style>
 </head>
 <body>
-    <h2>PT_DAVE AI SCANNER</h2>
-    <video id="input_video" playsinline webkit-playsinline muted style="display:none;"></video>
 
-    <canvas id="output_canvas" width="640" height="480"></canvas>
-    
-    <div class="metric">Neck Angle: <span id="angle_display" style="color:#00ffcc">0</span>°</div>
+    <div class="container">
+        <h2>🦾 PT_Dave AI Clinic</h2>
+        
+        <div id="canvas_container">
+            <video id="input_video" playsinline webkit-playsinline muted autoplay loop style="display:none;"></video>
+            <canvas id="output_canvas"></canvas>
+        </div>
 
-    <div class="panel">
-        <input type="email" id="user_email" placeholder="Patient Email (for results)">
-        <label style="display:block; margin-bottom: 10px;">
-            <input type="checkbox" id="numbness_check"> Numbness/Tingling in arms?
-        </label>
+        <div class="stats">
+            <div>Current Neck Angle: <span id="angle_display">0</span>°</div>
+        </div>
+
+        <input type="email" id="user_email" placeholder="Enter Email for Report" required>
+        
+        <div style="text-align: left; margin: 10px 0;">
+            <input type="checkbox" id="numbness_check" style="width: auto;"> 
+            <label for="numbness_check">I feel numbness in my hands</label>
+        </div>
+
         <button id="diagnose_btn">RUN AI DIAGNOSIS</button>
-        <div id="server_response" style="margin-top: 15px; color: #fff; line-height: 1.5;"></div>
+        <div id="server_response">Waiting for camera...</div>
     </div>
 
-        
-            <script>
+    <script>
         const videoElement = document.getElementById('input_video');
         const canvasElement = document.getElementById('output_canvas');
         const canvasCtx = canvasElement.getContext('2d');
+        const statusDiv = document.getElementById('server_response');
         let currentNeckAngle = 0;
 
+        function logStatus(msg) { statusDiv.innerText = msg; }
+
+        // --- 1. AI ENGINE SETUP ---
         const pose = new Pose({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`});
-        pose.setOptions({modelComplexity: 1, smoothLandmarks: true, minDetectionConfidence: 0.5});
+        pose.setOptions({ modelComplexity: 0, smoothLandmarks: true, minDetectionConfidence: 0.5 });
         
         pose.onResults((results) => {
             canvasCtx.save();
@@ -59,30 +72,37 @@
             canvasCtx.restore();
         });
 
-        // This is the "Force Start" fix for iPhone Safari
+        // --- 2. THE IPHONE-READY CAMERA START ---
         async function startCamera() {
+            logStatus("Accessing Camera...");
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: 'user', width: 640, height: 480 } 
+                });
                 videoElement.srcObject = stream;
                 await videoElement.play();
                 
+                logStatus("Camera Live. Loading AI...");
                 const camera = new Camera(videoElement, {
                     onFrame: async () => { await pose.send({image: videoElement}); },
                     width: 640, height: 480
                 });
-                camera.start();
+                await camera.start();
+                logStatus("System Ready.");
             } catch (err) {
-                alert("Please click 'Allow' on camera permissions!");
+                logStatus("Error: Please allow camera & refresh.");
             }
         }
         
         startCamera();
 
+        // --- 3. THE DIAGNOSIS & PAYSTACK LOGIC ---
         document.getElementById('diagnose_btn').onclick = async () => {
             const email = document.getElementById('user_email').value;
-            const statusDiv = document.getElementById('server_response');
-            if(!email) return alert("Please enter an email.");
-            statusDiv.innerText = "Consulting the Brain...";
+            if(!email) return alert("Please enter your email.");
+            
+            logStatus("Consulting PT_Dave Brain...");
+            
             try {
                 const response = await fetch("https://pt-dave-api--ptdaveofficial.replit.app/diagnose", {
                     method: "POST",
@@ -93,23 +113,26 @@
                         email: email
                     })
                 });
+                
                 const data = await response.json();
-                statusDiv.innerText = data.message;
+                logStatus(data.message);
+
                 if(data.price > 0) {
                     let handler = PaystackPop.setup({
-                        key: 'pk_test_82888d3572f50973c6fdaf2d556454a794747d9a', // <--- DONT FORGET YOUR KEY!
+                        key: 'pk_test_82888d3572f50973c6fdaf2d556454a794747d9a',
                         email: email,
                         amount: data.price * 100, 
                         currency: 'NGN',
-                        callback: function(res) { alert('Success!'); }
+                        callback: function(res) {
+                            alert('Success! Your clinical plan is being prepared.');
+                        }
                     });
                     handler.openIframe();
                 }
-            } catch (error) { statusDiv.innerText = "Connection Error."; }
+            } catch (error) {
+                logStatus("Backend Connection Error.");
+            }
         };
     </script>
-
-            
-
 </body>
 </html>
