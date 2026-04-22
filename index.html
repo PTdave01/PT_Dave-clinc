@@ -3,46 +3,50 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>PT_Dave AI Clinic</title>
+    <title>PT_Dave AI Clinic | Professional Triage</title>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils"></script>
     <script src="https://js.paystack.co/v1/inline.js"></script>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; text-align: center; background: #0a0a0a; color: white; margin: 0; padding: 20px; }
-        .container { max-width: 450px; margin: auto; }
-        #canvas_container { width: 100%; border-radius: 20px; overflow: hidden; background: #000; aspect-ratio: 4/3; border: 2px solid #00ff88; margin-bottom: 15px; position: relative; }
+        :root { --primary: #00ff88; --secondary: #00bcff; --bg: #0a0a0a; --card: #161616; }
+        body { font-family: -apple-system, system-ui, sans-serif; text-align: center; background: var(--bg); color: white; margin: 0; padding: 20px; }
+        .container { max-width: 480px; margin: auto; }
+        #canvas_container { width: 100%; border-radius: 20px; overflow: hidden; background: #000; aspect-ratio: 4/3; border: 2px solid #333; margin-bottom: 15px; position: relative; }
         canvas { width: 100%; height: 100%; display: block; }
-        input, button { width: 100%; padding: 16px; margin: 10px 0; border-radius: 12px; border: none; font-size: 16px; box-sizing: border-box; }
+        input, button { width: 100%; padding: 16px; margin: 10px 0; border-radius: 12px; border: none; font-size: 16px; box-sizing: border-box; transition: 0.3s; }
         input { background: #1a1a1a; color: white; border: 1px solid #333; }
-        .btn-pay { background: linear-gradient(135deg, #00ff88 0%, #00bcff 100%); color: black; font-weight: bold; cursor: pointer; text-transform: uppercase; letter-spacing: 1px; }
-        #response_box { background: #161616; padding: 20px; border-radius: 15px; margin-top: 20px; text-align: left; display: none; border: 1px solid #333; line-height: 1.6; }
+        input:focus { border-color: var(--primary); outline: none; }
+        .btn-main { background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%); color: black; font-weight: bold; cursor: pointer; text-transform: uppercase; }
+        .btn-main:active { transform: scale(0.98); }
+        #response_box { background: var(--card); padding: 20px; border-radius: 15px; margin-top: 20px; text-align: left; display: none; border: 1px solid #333; line-height: 1.6; }
         .wa-btn { display: block; background: #25D366; color: white; padding: 16px; text-decoration: none; border-radius: 12px; font-weight: bold; text-align: center; margin-top: 15px; }
+        .badge { background: #333; padding: 5px 12px; border-radius: 20px; font-size: 12px; color: var(--primary); }
     </style>
 </head>
 <body>
     <div class="container">
-        <h2 style="color: #00ff88;">🦾 PT_Dave AI Clinic</h2>
-        <p style="font-size: 14px; color: #888;">Professional Posture & Triage AI</p>
+        <h2 style="margin-bottom: 5px;">🦾 PT_Dave AI Clinic</h2>
+        <span class="badge">V3.0 PRODUCTION READY</span>
         
-        <button onclick="startCamera()" style="background:#333; color:white;">1. ACTIVATE AI SCANNER</button>
+        <button onclick="startCamera()" style="background:#222; color:white; margin-top: 20px;">1. INITIALIZE AI SCANNER</button>
         
         <div id="canvas_container">
             <video id="input_video" playsinline webkit-playsinline muted style="display:none;"></video>
             <canvas id="output_canvas"></canvas>
         </div>
         
-        <p>Detected Neck Angle: <span id="angle_display" style="color:#00ff88; font-weight:bold; font-size: 24px;">0</span>°</p>
+        <p style="font-size: 14px; color: #888;">Detected Neck Angle: <span id="angle_display" style="color:var(--primary); font-weight:bold; font-size: 20px;">0</span>°</p>
         
         <input type="email" id="user_email" placeholder="Patient Email Address">
         
-        <div style="background: #1a1a1a; padding: 10px; border-radius: 10px; margin: 10px 0;">
-            <label style="display:flex; align-items:center; justify-content:center; gap:10px;">
-                <input type="checkbox" id="numbness" style="width:20px; height:20px; margin:0;"> 
+        <div style="background: #1a1a1a; padding: 12px; border-radius: 12px; margin: 10px 0; border: 1px solid #222;">
+            <label style="display:flex; align-items:center; justify-content:center; gap:12px; cursor: pointer;">
+                <input type="checkbox" id="numbness" style="width:22px; height:22px; margin:0;"> 
                 I feel hand/arm numbness
             </label>
         </div>
 
-        <button id="diagnose_btn" class="btn-pay">2. GENERATE CLINICAL REPORT</button>
+        <button id="diagnose_btn" class="btn-main">2. GET DIAGNOSIS & EXERCISES</button>
         
         <div id="response_box"></div>
     </div>
@@ -53,6 +57,7 @@
         const canvasCtx = canvasElement.getContext('2d');
         let currentAngle = 0;
 
+        // Initialize Mediapipe Pose
         const pose = new Pose({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`});
         pose.setOptions({modelComplexity: 0, minDetectionConfidence: 0.5});
         
@@ -63,7 +68,7 @@
             if(res.poseLandmarks) {
                 const ear = res.poseLandmarks[8];
                 const shoulder = res.poseLandmarks[12];
-                // Professional Angle Calculation
+                // Clinical Angle Calculation
                 currentAngle = Math.abs((Math.atan2(ear.x - shoulder.x, -(ear.y - shoulder.y)) * 180) / Math.PI);
                 document.getElementById('angle_display').innerText = currentAngle.toFixed(1);
             }
@@ -80,47 +85,54 @@
             const numbness = document.getElementById('numbness').checked;
             const resBox = document.getElementById('response_box');
             
-            if(!email) return alert("Please enter email to receive results.");
+            if(!email) return alert("Please enter a valid email for the clinical record.");
 
-            // 1. Logic Processing (The "Brain" is now here)
+            // CLINICAL LOGIC ENGINE
             let cat, price, relief;
             if (currentAngle < 15) {
                 cat = "Optimal Alignment"; price = 0;
-                relief = "• Shoulder Rolls (10 reps)<br>• Neck Tilts (5s hold)";
+                relief = "• Standing Shoulder Rolls (10 reps)<br>• Isometric Neck Tilts (5s hold)";
             } else if (currentAngle < 30) {
-                cat = "Mild Tech Neck"; price = 10000;
-                relief = "• Chin Tucks (10 reps)<br>• Scapular Squeezes (10 reps)";
+                cat = "Mild Tech Neck (Grade 1)"; price = 10000;
+                relief = "• Chin Tucks (12 reps)<br>• Scapular Retractions (10 reps)";
             } else {
-                cat = "Significant Postural Strain"; price = 50000;
-                relief = "• Chest Opener Stretch (30s)<br>• Professional Physical Assessment Needed";
+                cat = "Significant Postural Strain (Grade 2)"; price = 50000;
+                relief = "• Doorway Chest Opener (30s hold)<br>• Professional Clinical Assessment Highly Recommended";
             }
 
-            const waMsg = encodeURIComponent(`Hello PT_Dave, my AI scan showed ${cat} (${currentAngle.toFixed(1)}°). I'm ready to start.`);
+            const waMsg = encodeURIComponent(`Hello PT_Dave, my AI scan showed ${cat} (${currentAngle.toFixed(1)}°). I've completed the payment and I'm ready for my session.`);
             const waLink = `https://wa.me/2349061832609?text=${waMsg}`;
 
             const fullReport = `
-                ${numbness ? "<b style='color:#ff4444;'>⚠️ RED FLAG: Numbness detected. Avoid heavy lifting.</b><br><br>" : ""}
-                <b style='color:#00ff88;'>DIAGNOSIS: ${cat}</b><br><br>
-                <b>IMMEDIATE RELIEF:</b><br>${relief}<br><br>
-                <a href="${waLink}" class="wa-btn">MESSAGE PT_DAVE ON WHATSAPP</a>
+                <div style="border-bottom: 1px solid #333; padding-bottom: 10px; margin-bottom: 10px;">
+                    <span style="color: #888; font-size: 12px;">OFFICIAL REPORT</span><br>
+                    <b style="color:var(--primary); font-size: 18px;">${cat}</b>
+                </div>
+                ${numbness ? "<b style='color:#ff4444;'>⚠️ CLINICAL RED FLAG:</b> Numbness indicates potential nerve involvement. Please move with caution.<br><br>" : ""}
+                <b>PRESCRIBED EXERCISES:</b><br>
+                <div style="background: #222; padding: 10px; border-radius: 8px; margin: 10px 0;">${relief}</div>
+                <p style="font-size: 13px; color: #888;">Note: This AI triage is a preliminary assessment by NoT_tHaT_kInD_oF_pHySiO.</p>
+                <a href="${waLink}" class="wa-btn">BOOK WHATSAPP CONSULTATION</a>
             `;
 
-            // 2. Triage/Payment Logic
+            // PAYMENT GATEWAY FLOW
             if (price > 0) {
-                PaystackPop.setup({
+                let handler = PaystackPop.setup({
                     key: 'pk_test_82888d3572f50973c6fdaf2d556454a794747d9a',
                     email: email,
-                    amount: price * 100,
+                    amount: price * 100, // Kobo
                     currency: 'NGN',
-                    callback: function() {
+                    callback: function(response) {
                         resBox.innerHTML = fullReport;
                         resBox.style.display = "block";
-                        alert("Payment successful! Accessing treatment plan...");
+                        resBox.scrollIntoView({ behavior: 'smooth' });
                     }
-                }).openIframe();
+                });
+                handler.openIframe();
             } else {
                 resBox.innerHTML = fullReport;
                 resBox.style.display = "block";
+                resBox.scrollIntoView({ behavior: 'smooth' });
             }
         };
     </script>
