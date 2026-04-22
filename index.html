@@ -10,99 +10,162 @@
     <script src="https://js.paystack.co/v1/inline.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        .video-container { position: relative; width: 100%; max-width: 500px; margin: auto; border-radius: 24px; overflow: hidden; background: #000; border: 4px solid #3b82f6; box-shadow: 0 0 30px rgba(59, 130, 246, 0.4); }
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;500;700&display=swap');
+        
+        body { font-family: 'Space Grotesk', sans-serif; background-color: #020617; }
+        
+        .neural-gradient {
+            background: radial-gradient(circle at top right, rgba(37, 99, 235, 0.1), transparent),
+                        radial-gradient(circle at bottom left, rgba(168, 85, 247, 0.05), transparent);
+        }
+
+        .video-container { 
+            position: relative; 
+            width: 100%; 
+            max-width: 500px; 
+            margin: auto; 
+            border-radius: 24px; 
+            overflow: hidden; 
+            background: #000; 
+            border: 2px solid #1e293b;
+            box-shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
         #output_canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
         #input_video { width: 100%; height: auto; transform: scaleX(-1); }
-        .glass { background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
-        .pt-dave-glow { text-shadow: 0 0 10px rgba(59, 130, 246, 0.8); }
+
+        .glass-card { 
+            background: rgba(15, 23, 42, 0.6); 
+            backdrop-filter: blur(16px); 
+            border: 1px solid rgba(255, 255, 255, 0.05); 
+        }
+
+        .status-tag {
+            position: absolute;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(37, 99, 235, 0.9);
+            color: white;
+            padding: 6px 16px;
+            border-radius: 99px;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            white-space: nowrap;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .redflag-input:checked {
+            background-color: #ef4444;
+            border-color: #ef4444;
+        }
     </style>
 </head>
-<body class="bg-[#020617] text-slate-200 font-sans min-h-screen flex flex-col">
+<body class="neural-gradient text-slate-200 min-h-screen flex flex-col">
 
-    <nav class="p-6 flex justify-between items-center border-b border-slate-800/50">
-        <div class="text-2xl font-black tracking-tighter text-blue-500 pt-dave-glow">PT_DAVE <span class="text-white text-sm font-light tracking-widest ml-1">SYSTEMS v3.0</span></div>
-        <div class="flex items-center space-x-2">
-            <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-            <span class="text-[10px] font-bold text-green-400 tracking-widest uppercase">Active 2026</span>
+    <nav class="p-6 flex justify-between items-center border-b border-slate-800/40">
+        <div class="text-2xl font-bold tracking-tighter text-blue-500">PT_DAVE</div>
+        <div class="flex items-center space-x-2 bg-slate-900/50 px-3 py-1 rounded-full border border-slate-800">
+            <span class="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
+            <span class="text-[9px] font-bold text-slate-400 tracking-widest uppercase">LIVE</span>
         </div>
     </nav>
 
-    <div class="max-w-4xl mx-auto p-6 flex-grow">
-        <div class="text-center mb-10">
-            <h1 class="text-5xl font-black text-white mb-3 italic tracking-tighter">NoT_tHaT_kInD_oF_pHySiO</h1>
-            <p class="text-blue-400 font-mono text-xs tracking-[0.3em] uppercase">Neural Triage Analysis</p>
+    <div class="max-w-4xl mx-auto p-6 flex-grow w-full">
+        <div class="text-center mb-12 mt-4">
+            <h1 class="text-4xl md:text-5xl font-bold text-white mb-3 italic tracking-tighter uppercase">NoT_tHaT_kInD_oF_pHySiO</h1>
+            <p class="text-slate-500 text-[10px] tracking-[0.4em] uppercase font-medium">Neural Triage & Biomechanic Analysis</p>
         </div>
 
         <div class="video-container">
             <video id="input_video" playsinline></video>
             <canvas id="output_canvas"></canvas>
-            <div id="status-overlay" class="absolute bottom-4 left-4 bg-blue-600/80 px-4 py-1 rounded-full text-[10px] font-bold text-white tracking-widest uppercase shadow-lg">Calibrating PT_Dave Sensors...</div>
+            <div id="status-overlay" class="status-tag">PT_Dave: Neural Link Active</div>
         </div>
 
-        <div class="mt-12 glass p-8 rounded-3xl shadow-2xl border-t border-blue-500/20">
-            <h2 class="text-2xl font-bold mb-6 text-white flex items-center">
-                <span class="text-blue-500 mr-3">//</span> DATA INPUT
-            </h2>
+        <div class="mt-12 glass-card p-8 rounded-[32px] shadow-2xl">
+            <div class="flex items-center mb-8">
+                <div class="h-8 w-1 bg-blue-500 rounded-full mr-4"></div>
+                <h2 class="text-xl font-bold text-white tracking-tight uppercase">Triage Data</h2>
+            </div>
             
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                <div>
-                    <label class="text-[10px] font-bold text-slate-500 uppercase ml-1 mb-2 block">Neural ID (Email)</label>
-                    <input type="email" id="email" placeholder="patient@neuro-link.com" class="w-full bg-slate-950 border border-slate-800 p-4 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all text-blue-400 font-mono">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
+                <div class="space-y-2">
+                    <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Identity (Email)</label>
+                    <input type="email" id="email" placeholder="patient@rehab-link.com" class="w-full bg-slate-950/50 border border-slate-800 p-4 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all text-blue-400">
                 </div>
-                <div>
-                    <label class="text-[10px] font-bold text-slate-500 uppercase ml-1 mb-2 block">Primary Deficit</label>
-                    <select id="main-issue" class="w-full bg-slate-950 border border-slate-800 p-4 rounded-2xl text-slate-400 outline-none focus:ring-2 focus:ring-blue-500">
+                <div class="space-y-2">
+                    <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Impairment Type</label>
+                    <select id="main-issue" class="w-full bg-slate-950/50 border border-slate-800 p-4 rounded-2xl text-slate-400 outline-none focus:ring-2 focus:ring-blue-500 appearance-none">
                         <option value="">Select Condition...</option>
-                        <option value="Stroke Recovery">Stroke Recovery / Hemiplegia</option>
-                        <option value="Neurological Back Pain">Neural Back Pain / Sciatica</option>
-                        <option value="Cervical Neuralgia">Cervical Neuralgia / Neck</option>
-                        <option value="Geriatric Mobility">Geriatric Mobility Decline</option>
+                        <option value="Stroke Recovery">Stroke / Hemiplegic Recovery</option>
+                        <option value="Sciatica/Back">Neural Back Pain / Sciatica</option>
+                        <option value="Neck/Cervical">Cervical Neuralgia / Neck</option>
+                        <option value="Geriatric Mobility">Geriatric Functional Decline</option>
                     </select>
                 </div>
             </div>
 
-            <div class="mb-10 p-6 bg-red-500/5 rounded-2xl border border-red-500/10">
-                <p class="text-[10px] font-black text-red-500 mb-4 uppercase tracking-[0.2em]">Safety Protocol: Check Red Flags</p>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-medium">
-                    <label class="flex items-center space-x-3 p-3 rounded-xl border border-slate-800 hover:border-red-500/30 transition cursor-pointer">
-                        <input type="checkbox" class="redflag w-5 h-5 rounded-md border-slate-700 bg-slate-950 text-red-600" value="Sudden Weakness"> <span>Sudden Motor Weakness</span>
+            <div class="mb-10 p-6 bg-red-500/5 rounded-2xl border border-red-500/20">
+                <div class="flex items-center mb-4">
+                    <span class="text-red-500 mr-2">⚠️</span>
+                    <p class="text-[10px] font-bold text-red-500 uppercase tracking-widest">Safety Scan: Check Active Symptoms</p>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                    <label class="flex items-center space-x-3 p-4 rounded-xl bg-slate-950/40 border border-slate-800 hover:border-red-500/40 transition cursor-pointer">
+                        <input type="checkbox" class="redflag-input w-5 h-5 rounded border-slate-700 bg-slate-900" value="Sudden Weakness"> 
+                        <span class="text-slate-300">Sudden Motor Weakness</span>
                     </label>
-                    <label class="flex items-center space-x-3 p-3 rounded-xl border border-slate-800 hover:border-red-500/30 transition cursor-pointer">
-                        <input type="checkbox" class="redflag w-5 h-5 rounded-md border-slate-700 bg-slate-950 text-red-600" value="Loss of Sensation"> <span>Sensory Deprivation</span>
+                    <label class="flex items-center space-x-3 p-4 rounded-xl bg-slate-950/40 border border-slate-800 hover:border-red-500/40 transition cursor-pointer">
+                        <input type="checkbox" class="redflag-input w-5 h-5 rounded border-slate-700 bg-slate-900" value="Loss of Sensation"> 
+                        <span class="text-slate-300">Sensory Deprivation</span>
                     </label>
-                    <label class="flex items-center space-x-3 p-3 rounded-xl border border-slate-800 hover:border-red-500/30 transition cursor-pointer">
-                        <input type="checkbox" class="redflag w-5 h-5 rounded-md border-slate-700 bg-slate-950 text-red-600" value="Bladder Control"> <span>Autonomic Dysfunction</span>
+                    <label class="flex items-center space-x-3 p-4 rounded-xl bg-slate-950/40 border border-slate-800 hover:border-red-500/40 transition cursor-pointer">
+                        <input type="checkbox" class="redflag-input w-5 h-5 rounded border-slate-700 bg-slate-900" value="Bladder Control"> 
+                        <span class="text-slate-300">Autonomic Dysfunction</span>
                     </label>
-                    <label class="flex items-center space-x-3 p-3 rounded-xl border border-slate-800 hover:border-red-500/30 transition cursor-pointer">
-                        <input type="checkbox" class="redflag w-5 h-5 rounded-md border-slate-700 bg-slate-950 text-red-600" value="Speech Difficulties"> <span>Cognitive/Speech Lag</span>
+                    <label class="flex items-center space-x-3 p-4 rounded-xl bg-slate-950/40 border border-slate-800 hover:border-red-500/40 transition cursor-pointer">
+                        <input type="checkbox" class="redflag-input w-5 h-5 rounded border-slate-700 bg-slate-900" value="Speech Issues"> 
+                        <span class="text-slate-300">Cognitive/Speech Lag</span>
                     </label>
                 </div>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div class="group p-8 rounded-3xl border border-blue-500/20 bg-blue-500/5 hover:border-blue-500/50 transition-all duration-500">
-                    <h3 class="text-2xl font-black text-white italic tracking-tighter uppercase">Basic Scan</h3>
-                    <p class="text-slate-400 text-xs mt-2 leading-relaxed font-light">PT_Dave AI Scan + Red Flag Screening + Automated Provisional Management Guide.</p>
-                    <div class="mt-6 text-3xl font-black text-blue-500">₦5,000</div>
-                    <button onclick="pay(5000, 'Basic Triage')" class="mt-6 w-full bg-blue-600 hover:bg-blue-500 text-white font-black py-5 rounded-2xl transition shadow-[0_10px_20px_-10px_rgba(59,130,246,0.5)]">INITIATE SCAN</button>
+                <div class="p-8 rounded-[24px] border border-blue-500/20 bg-blue-500/5 flex flex-col justify-between hover:bg-blue-500/10 transition-all">
+                    <div>
+                        <h3 class="text-2xl font-bold text-white italic tracking-tighter uppercase">Basic AI Scan</h3>
+                        <p class="text-slate-500 text-xs mt-3 leading-relaxed">Automated biomechanic report and provisional PT_Dave recovery guide.</p>
+                        <div class="mt-6 text-3xl font-bold text-blue-500 italic">₦5,000</div>
+                    </div>
+                    <button onclick="pay(5000, 'Basic Scan')" class="mt-8 w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-5 rounded-2xl transition-all uppercase tracking-widest text-xs">Initiate Scan</button>
                 </div>
 
-                <div class="group p-8 rounded-3xl border border-purple-500/20 bg-purple-500/5 hover:border-purple-500/50 transition-all duration-500">
-                    <h3 class="text-2xl font-black text-purple-400 italic tracking-tighter uppercase">Specialist Link</h3>
-                    <p class="text-slate-400 text-xs mt-2 leading-relaxed font-light">Full AI Diagnostics + Manual Review by PT_Dave's Primary Specialist.</p>
-                    <div class="mt-6 text-3xl font-black text-purple-500">₦10,000</div>
-                    <button onclick="pay(10000, 'Specialist Link')" class="mt-6 w-full bg-purple-600 hover:bg-purple-500 text-white font-black py-5 rounded-2xl transition shadow-[0_10px_20px_-10px_rgba(168,85,247,0.5)]">ACCESS BRAIN</button>
+                <div class="p-8 rounded-[24px] border border-purple-500/20 bg-purple-500/5 flex flex-col justify-between hover:bg-purple-500/10 transition-all">
+                    <div>
+                        <h3 class="text-2xl font-bold text-purple-400 italic tracking-tighter uppercase">Specialist Link</h3>
+                        <p class="text-slate-500 text-xs mt-3 leading-relaxed">AI Diagnostics + assessment review by PT_Dave's Specialist Consultant.</p>
+                        <div class="mt-6 text-3xl font-bold text-purple-500 italic">₦10,000</div>
+                    </div>
+                    <button onclick="pay(10000, 'Specialist Link')" class="mt-8 w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-5 rounded-2xl transition-all uppercase tracking-widest text-xs">Access Brain</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <footer class="p-10 border-t border-slate-800/50 text-center glass mt-10">
-        <div class="max-w-4xl mx-auto">
-            <p class="text-[10px] font-bold text-slate-500 tracking-[0.4em] uppercase mb-2">System Authentication</p>
-            <p class="text-xs text-slate-400 font-light">
-                &copy; 2026 <span class="font-bold text-white tracking-tighter">NoT_tHaT_kInD_oF_pHySiO</span> | <span class="text-blue-500 font-mono">PT_Dave</span>
-            </p>
+    <footer class="w-full py-16 px-6 border-t border-slate-800/40 bg-slate-950/20 mt-12">
+        <div class="max-w-4xl mx-auto text-center">
+            <div class="flex flex-col items-center justify-center space-y-2">
+                <p class="text-sm text-slate-300 font-bold tracking-tighter italic">
+                    NoT_tHaT_kInD_oF_pHySiO
+                </p>
+                <p class="text-[10px] text-slate-500 font-medium tracking-[0.2em] uppercase">
+                    &copy; 2026 // <span class="text-blue-500 font-bold">PT_Dave</span>
+                </p>
+            </div>
+            <div class="h-8"></div>
         </div>
     </footer>
 
@@ -114,10 +177,10 @@
 
         function pay(amount, tier) {
             const email = document.getElementById('email').value;
-            const issue = document.getElementById('main-issue').value || "Undiagnosed";
-            const flags = Array.from(document.querySelectorAll('.redflag:checked')).map(f => f.value).join(', ') || "No Flags";
+            const issue = document.getElementById('main-issue').value || "General Neuro";
+            const flags = Array.from(document.querySelectorAll('.redflag-input:checked')).map(f => f.value).join(', ') || "None";
 
-            if (!email || !email.includes('@')) { alert("Neural ID (Email) Required."); return; }
+            if (!email || !email.includes('@')) { alert("Identity (Email) Required."); return; }
             
             let handler = PaystackPop.setup({
                 key: 'pk_live_ef67461cd9b75a09bf05c7c5c588dea850470cdf', 
@@ -125,7 +188,7 @@
                 amount: amount * 100,
                 currency: "NGN",
                 callback: function(response) {
-                    const msg = `Hi PT_Dave, payment confirmed for ${tier}.%0A%0AComplaint: ${issue}%0ASafety Flags: ${flags}%0AEmail: ${email}%0A%0AProcessing Neural Report...`;
+                    const msg = `Hi PT_Dave, payment confirmed for ${tier}.%0A%0AComplaint: ${issue}%0ASafety Flags: ${flags}%0AEmail: ${email}`;
                     window.location.href = `https://wa.me/2349033325615?text=${msg}`;
                 }
             });
@@ -133,12 +196,12 @@
         }
 
         function onResults(results) {
-            statusOverlay.innerText = "PT_DAVE: ANALYZING BIOMECHANICS";
+            statusOverlay.innerText = "PT_DAVE: SCAN ACTIVE";
             canvasCtx.save();
             canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
             canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
             if (results.poseLandmarks) {
-                drawConnectors(canvasCtx, results.poseLandmarks, POSE_CONNECTIONS, {color: '#3b82f6', lineWidth: 5});
+                drawConnectors(canvasCtx, results.poseLandmarks, POSE_CONNECTIONS, {color: '#3b82f6', lineWidth: 4});
                 drawLandmarks(canvasCtx, results.poseLandmarks, {color: '#ffffff', lineWidth: 1, radius: 2});
             }
             canvasCtx.restore();
