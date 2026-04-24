@@ -11,34 +11,22 @@
     <script src="https://js.paystack.co/v1/inline.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;500;700;800&family=Space+Mono&display=swap');
-        
         body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f8fafc; color: #1e293b; overflow-x: hidden; }
         .mono { font-family: 'Space Mono', monospace; }
-        
-        /* Everlasting Heart Background */
         #neural-pulse { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; opacity: 0.1; pointer-events: none; }
-
+        
+        /* FIXED CAMERA CONTAINER */
         .video-container { 
-            position: relative; width: 100%; max-width: 500px; margin: auto; 
+            position: relative; width: 100%; max-width: 500px; height: 375px; margin: auto; 
             border-radius: 32px; overflow: hidden; background: #000; 
-            border: 1px solid rgba(37, 99, 235, 0.2);
+            border: 2px solid rgba(37, 99, 235, 0.2);
             box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.2);
         }
-        #output_canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
-        #input_video { width: 100%; height: auto; transform: scaleX(-1); }
+        #output_canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 5; }
+        #input_video { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); visibility: hidden; }
 
-        .premium-card { 
-            background: rgba(255, 255, 255, 0.85); 
-            backdrop-filter: blur(16px); border-radius: 40px; 
-            border: 1px solid rgba(255, 255, 255, 0.5); 
-        }
-
-        .pt-dave-overlay { 
-            position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%);
-            background: rgba(15, 23, 42, 0.9); color: #3b82f6; 
-            padding: 10px 24px; border-radius: 99px; font-size: 9px; font-weight: 800; 
-            letter-spacing: 0.2em; text-transform: uppercase; border: 1px solid rgba(59, 130, 246, 0.3);
-        }
+        .premium-card { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(16px); border-radius: 40px; border: 1px solid rgba(255, 255, 255, 0.5); }
+        .pt-dave-overlay { position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%); background: rgba(15, 23, 42, 0.9); color: #3b82f6; padding: 10px 24px; border-radius: 99px; font-size: 9px; font-weight: 800; letter-spacing: 0.2em; text-transform: uppercase; border: 1px solid rgba(59, 130, 246, 0.3); z-index: 10; }
     </style>
 </head>
 <body class="flex flex-col min-h-screen pt-12">
@@ -51,91 +39,64 @@
         </div>
 
         <div class="video-container mb-12">
-            <video id="input_video" playsinline class="hidden"></video>
+            <video id="input_video" playsinline></video>
             <canvas id="output_canvas"></canvas>
-            <div id="status-overlay" class="pt-dave-overlay italic">Neural Baseline Syncing...</div>
+            <div id="status-overlay" class="pt-dave-overlay italic">Neural Link Active</div>
         </div>
 
         <div class="premium-card p-8 md:p-12 shadow-2xl">
-            <div class="mb-10">
-                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
-                    <h3 class="text-xl font-black text-slate-900 uppercase tracking-tight italic">
-                        <span class="text-blue-600 mr-2 mono not-italic">01/</span> Clinical Intake
-                    </h3>
-                    <div class="flex gap-2">
-                        <button onclick="activateVeto()" id="veto-btn" class="bg-red-600 hover:bg-red-700 text-white text-[10px] px-5 py-2.5 rounded-full font-black uppercase tracking-widest transition shadow-lg shadow-red-100">Manual Veto</button>
-                    </div>
-                </div>
+            <div class="flex justify-between items-center mb-10">
+                <h3 class="text-xl font-black text-slate-900 uppercase tracking-tight italic"><span class="text-blue-600 mr-2 mono not-italic">01/</span> Clinical Intake</h3>
+                <button onclick="activateVeto()" id="veto-btn" class="bg-red-600 hover:bg-red-700 text-white text-[10px] px-6 py-3 rounded-full font-black uppercase tracking-widest transition">Manual Veto</button>
+            </div>
 
-                <div id="veto-alert" class="hidden p-5 mb-8 bg-red-50 border-2 border-red-500 rounded-3xl text-center">
-                    <p class="text-red-700 text-[10px] font-black uppercase tracking-widest">🚨 LOCKDOWN: MOSES INTERVENTION ACTIVE 🚨</p>
-                </div>
+            <div id="veto-alert" class="hidden p-5 mb-8 bg-red-50 border-2 border-red-500 rounded-3xl text-center">
+                <p class="text-red-700 text-[10px] font-black uppercase tracking-widest italic">🚨 Emergency Veto Triggered: Moses is Reviewing 🚨</p>
+            </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div class="space-y-2">
-                        <label class="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Identity (Email)</label>
-                        <input type="email" id="email" placeholder="patient@clinic.ng" class="w-full bg-white border border-slate-100 p-4 rounded-2xl focus:ring-4 focus:ring-blue-50 outline-none transition font-medium">
-                    </div>
-                    <div class="space-y-2">
-                        <label class="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Impairment Category</label>
-                        <select id="main-issue" onchange="triggerClinicalBranch(this.value)" class="w-full bg-white border border-slate-100 p-4 rounded-2xl text-slate-600 outline-none focus:ring-4 focus:ring-blue-50 font-medium">
-                            <option value="">Select Category...</option>
-                            <option value="Sciatica/Back Pain">Neural Back Pain / Sciatica</option>
-                            <option value="Stroke Recovery">Stroke / Hemiplegic Recovery</option>
-                            <option value="Geriatric Decline">Geriatric Functional Decline</option>
-                        </select>
-                    </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="space-y-2">
+                    <label class="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Identity (Email)</label>
+                    <input type="email" id="email" placeholder="patient@clinic.ng" class="w-full bg-white border border-slate-100 p-4 rounded-2xl outline-none focus:ring-4 focus:ring-blue-50 font-medium">
                 </div>
-
-                <div id="dynamic-questions" class="mt-8 hidden">
-                    <div class="p-8 bg-blue-50/50 rounded-3xl border border-blue-100 relative">
-                        <p class="text-[9px] font-black text-blue-500 mb-6 uppercase tracking-widest italic">// Differential Analysis</p>
-                        <div id="branch-content" class="space-y-6"></div>
-                    </div>
+                <div class="space-y-2">
+                    <label class="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Impairment</label>
+                    <select id="main-issue" onchange="triggerClinicalBranch(this.value)" class="w-full bg-white border border-slate-100 p-4 rounded-2xl font-medium outline-none">
+                        <option value="">Select Category...</option>
+                        <option value="Sciatica/Back Pain">Neural Back Pain / Sciatica</option>
+                        <option value="Stroke Recovery">Stroke / Hemiplegic Recovery</option>
+                    </select>
                 </div>
             </div>
 
-            <div class="mb-14 p-8 bg-slate-900 rounded-[32px] text-white">
-                <p class="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-6 italic">Systemic Review // Red Flags</p>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <label class="flex items-center space-x-3 p-4 bg-slate-800 rounded-2xl border border-slate-700 cursor-pointer hover:border-red-500 transition">
-                        <input type="checkbox" class="redflag w-5 h-5 rounded-md accent-red-600" value="Bladder Control">
-                        <span class="text-[11px] font-bold uppercase tracking-tight">Bladder Control Issue</span>
-                    </label>
-                    <label class="flex items-center space-x-3 p-4 bg-slate-800 rounded-2xl border border-slate-700 cursor-pointer hover:border-red-500 transition">
-                        <input type="checkbox" class="redflag w-5 h-5 rounded-md accent-red-600" value="Saddle Numbness">
-                        <span class="text-[11px] font-bold uppercase tracking-tight">Saddle Anesthesia</span>
-                    </label>
-                </div>
+            <div id="dynamic-questions" class="mt-8 hidden">
+                <div class="p-8 bg-blue-50/50 rounded-3xl border border-blue-100"><div id="branch-content" class="space-y-6"></div></div>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div class="bg-white p-10 rounded-[40px] border border-slate-100 shadow-xl hover:translate-y-[-5px] transition-all">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mt-12">
+                <div class="bg-white p-10 rounded-[40px] border border-slate-100 shadow-xl">
                     <h3 class="text-2xl font-black text-slate-900 tracking-tighter uppercase italic">AI Baseline</h3>
                     <div class="mt-8 text-4xl font-black text-blue-600 mono">₦5,000</div>
-                    <button onclick="pay(5000, 'Baseline Scan')" class="mt-8 w-full bg-blue-600 text-white font-black py-5 rounded-2xl uppercase tracking-widest text-[10px] shadow-lg shadow-blue-100">Start Neural Link</button>
+                    <button onclick="pay(5000, 'Baseline Scan')" class="mt-8 w-full bg-blue-600 text-white font-black py-5 rounded-2xl uppercase tracking-widest text-[10px]">Start Neural Link</button>
                 </div>
-                <div class="bg-white p-10 rounded-[40px] border border-slate-100 shadow-xl hover:translate-y-[-5px] transition-all">
+                <div class="bg-white p-10 rounded-[40px] border border-slate-100 shadow-xl">
                     <h3 class="text-2xl font-black text-slate-900 tracking-tighter uppercase italic">Expert Link</h3>
                     <div class="mt-8 text-4xl font-black text-purple-600 mono">₦10,000</div>
-                    <button onclick="pay(10000, 'Specialist Triage')" class="mt-8 w-full bg-purple-600 text-white font-black py-5 rounded-2xl uppercase tracking-widest text-[10px] shadow-lg shadow-purple-100">Access specialist</button>
+                    <button onclick="pay(10000, 'Specialist Triage')" class="mt-8 w-full bg-purple-600 text-white font-black py-5 rounded-2xl uppercase tracking-widest text-[10px]">Access Moses</button>
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        // --- 1. THE EVERLASTING HEART MATH ---
+        // HEART PULSE MATH
         const pulseCanvas = document.getElementById('neural-pulse');
         const pCtx = pulseCanvas.getContext('2d');
         pulseCanvas.width = window.innerWidth;
         pulseCanvas.height = window.innerHeight;
-
         function drawEverlasting(t) {
             pCtx.clearRect(0, 0, pulseCanvas.width, pulseCanvas.height);
-            pCtx.beginPath();
-            pCtx.strokeStyle = '#2563eb';
-            pCtx.lineWidth = 0.5;
+            pCtx.beginPath(); pCtx.strokeStyle = '#2563eb'; pCtx.lineWidth = 0.5;
             for (let i = 0; i < Math.PI * 2; i += 0.02) {
                 let x = 16 * Math.pow(Math.sin(i), 3);
                 let y = -(13 * Math.cos(i) - 5 * Math.cos(2*i) - 2 * Math.cos(3*i) - Math.cos(4*i));
@@ -143,64 +104,50 @@
                 let drawY = pulseCanvas.height/2 + y * (12 + Math.sin(t) * 2);
                 if (i === 0) pCtx.moveTo(drawX, drawY); else pCtx.lineTo(drawX, drawY);
             }
-            pCtx.stroke();
-            requestAnimationFrame(() => drawEverlasting(t + 0.03));
+            pCtx.stroke(); requestAnimationFrame(() => drawEverlasting(t + 0.03));
         }
         drawEverlasting(0);
 
-        // --- 2. CLINICAL LOGIC & SAFETY ---
+        // CLINICAL LOGIC
         let isVetoActive = false;
-
         function activateVeto() {
             isVetoActive = true;
             document.getElementById('veto-alert').classList.remove('hidden');
-            statusOverlay.innerText = "SYSTEM LOCK: PT INTERVENTION";
+            const statusOverlay = document.getElementById('status-overlay');
+            statusOverlay.innerText = "LOCKDOWN: PT REVIEW";
             statusOverlay.style.background = "#ef4444";
-            window.open(`https://wa.me/2349033325615?text=🚨 EMERGENCY VETO TRIGGERED: Requesting manual triage review.`, '_blank');
+            
+            // CORRECTED WHATSAPP LINK
+            const msg = window.encodeURIComponent("🚨 EMERGENCY VETO TRIGGERED: Requesting manual triage review for my current session.");
+            window.location.href = `https://wa.me/2349033325615?text=${msg}`;
         }
 
+        // ... [Rest of your pay() and branch functions] ...
         function triggerClinicalBranch(issue) {
             const container = document.getElementById('dynamic-questions');
             const content = document.getElementById('branch-content');
             container.classList.remove('hidden');
             if (issue === "Sciatica/Back Pain") {
-                content.innerHTML = `
-                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-2">Pain exacerbation on Valsalva (Cough/Sneeze)?</label>
-                    <select class="w-full p-4 rounded-xl border text-sm font-bold bg-white mb-4"><option>No Change</option><option>Radiating Sharp Pain</option></select>
-                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-2">Night Pain Level (1-10)</label>
-                    <input type="range" class="w-full accent-blue-600">
-                `;
-            } else {
-                content.innerHTML = `<p class="text-xs font-bold text-slate-400 uppercase italic">Loading specific neural protocol...</p>`;
+                content.innerHTML = `<label class="block text-[10px] font-black uppercase text-slate-500 mb-2">Pain exacerbation on Cough/Sneeze?</label><select class="w-full p-4 rounded-xl border font-bold bg-white"><option>No Change</option><option>Sharp Pain</option></select>`;
             }
         }
 
-        document.querySelectorAll('.redflag').forEach(box => {
-            box.addEventListener('change', function() {
-                if (this.checked) {
-                    activateVeto();
-                    window.open(`https://wa.me/2349033325615?text=🚨 RED FLAG DETECTED: ${this.value}. Initiating specialist contact.`, '_blank');
-                }
-            });
-        });
-
         function pay(amount, tier) {
             const email = document.getElementById('email').value;
-            if (!email.includes('@')) { alert("Identity Required."); return; }
+            if (!email.includes('@')) { alert("Email Required."); return; }
             PaystackPop.setup({
                 key: 'pk_live_ef67461cd9b75a09bf05c7c5c588dea850470cdf',
                 email: email, amount: amount * 100, currency: "NGN",
                 callback: function(res) {
-                    window.location.href = `https://wa.me/2349033325615?text=🚀 REHAB_SESSION_AUTHORIZED: ${tier}. Email: ${email}`;
+                    window.location.href = `https://wa.me/2349033325615?text=REHAB_AUTHORIZED_${tier}`;
                 }
             }).openIframe();
         }
 
-        // --- 3. NEURAL SCANNING ---
+        // CAMERA FIX
         const videoElement = document.getElementById('input_video');
         const canvasElement = document.getElementById('output_canvas');
         const canvasCtx = canvasElement.getContext('2d');
-        const statusOverlay = document.getElementById('status-overlay');
 
         function onResults(results) {
             if (isVetoActive) return;
