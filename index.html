@@ -12,193 +12,198 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;500;700;800&family=Space+Mono&display=swap');
         
-        body { 
-            font-family: 'Plus Jakarta Sans', sans-serif; 
-            background-color: #f8fafc; 
-            color: #1e293b;
-        }
-
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f8fafc; color: #1e293b; overflow-x: hidden; }
         .mono { font-family: 'Space Mono', monospace; }
+        
+        /* Everlasting Heart Background */
+        #neural-pulse { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; opacity: 0.1; pointer-events: none; }
 
         .video-container { 
-            position: relative; 
-            width: 100%; 
-            max-width: 500px; 
-            margin: auto; 
-            border-radius: 20px; 
-            overflow: hidden; 
-            background: #000; 
-            border: 1px solid #e2e8f0;
-            box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.1);
+            position: relative; width: 100%; max-width: 500px; margin: auto; 
+            border-radius: 32px; overflow: hidden; background: #000; 
+            border: 1px solid rgba(37, 99, 235, 0.2);
+            box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.2);
         }
-
         #output_canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
         #input_video { width: 100%; height: auto; transform: scaleX(-1); }
 
         .premium-card { 
-            background: rgba(255, 255, 255, 0.7); 
-            backdrop-filter: blur(10px); 
-            border-radius: 28px; 
-            border: 1px solid rgba(255, 255, 255, 0.4); 
-            box-shadow: 0 15px 45px -10px rgba(0, 0, 0, 0.05);
+            background: rgba(255, 255, 255, 0.85); 
+            backdrop-filter: blur(16px); border-radius: 40px; 
+            border: 1px solid rgba(255, 255, 255, 0.5); 
         }
 
-        .pt-dave-overlay {
-            position: absolute;
-            bottom: 20px; 
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(37, 99, 235, 0.95);
-            color: white;
-            padding: 10px 20px;
-            border-radius: 99px;
-            font-size: 11px;
-            font-weight: 700;
-            letter-spacing: 0.1em;
-            text-transform: uppercase;
-            white-space: nowrap;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-        }
-
-        .redflag-input {
-            width: 18px; height: 18px; 
-            appearance: none; 
-            border: 2px solid #cbd5e1; 
-            border-radius: 6px; 
-            background: white;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        .redflag-input:checked { 
-            background-color: #ef4444; 
-            border-color: #ef4444; 
-            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="white"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>');
-            background-position: center;
-            background-repeat: no-repeat;
+        .pt-dave-overlay { 
+            position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%);
+            background: rgba(15, 23, 42, 0.9); color: #3b82f6; 
+            padding: 10px 24px; border-radius: 99px; font-size: 9px; font-weight: 800; 
+            letter-spacing: 0.2em; text-transform: uppercase; border: 1px solid rgba(59, 130, 246, 0.3);
         }
     </style>
 </head>
-<body class="flex flex-col min-h-screen pt-12"> <div class="max-w-4xl mx-auto p-6 flex-grow w-full">
-        <div class="text-center mb-10 px-4">
-            <h1 class="text-2xl sm:text-3xl md:text-5xl font-extrabold text-slate-900 mb-3 italic tracking-tighter uppercase leading-tight">
-                NoT_tHaT_kInD_oF_pHySiO
-            </h1>
-            <p class="text-blue-500 mono text-[10px] tracking-[0.3em] uppercase font-bold">Neural Biomechanics & Triage</p>
+<body class="flex flex-col min-h-screen pt-12">
+    <canvas id="neural-pulse"></canvas>
+
+    <div class="max-w-4xl mx-auto p-6 flex-grow w-full">
+        <div class="text-center mb-12">
+            <h1 class="text-4xl md:text-6xl font-extrabold text-slate-900 mb-2 italic tracking-tighter uppercase leading-none">NoT_tHaT_kInD_oF_pHySiO</h1>
+            <p class="text-blue-600 mono text-[10px] tracking-[0.4em] uppercase font-black">Neural Interface // PT_Dave OS v3.0</p>
         </div>
 
         <div class="video-container mb-12">
-            <video id="input_video" playsinline></video>
+            <video id="input_video" playsinline class="hidden"></video>
             <canvas id="output_canvas"></canvas>
-            <div id="status-overlay" class="pt-dave-overlay">Calibrating Neural Link...</div>
+            <div id="status-overlay" class="pt-dave-overlay italic">Neural Baseline Syncing...</div>
         </div>
 
-        <div class="premium-card p-10 shadow-lg">
-            
-            <div class="mb-12">
-                <h3 class="text-lg font-extrabold text-slate-900 mb-6 uppercase tracking-tight flex items-center">
-                    <span class="text-blue-600 mr-2 mono font-bold">01/</span> Neural Identity & Focus
-                </h3>
+        <div class="premium-card p-8 md:p-12 shadow-2xl">
+            <div class="mb-10">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+                    <h3 class="text-xl font-black text-slate-900 uppercase tracking-tight italic">
+                        <span class="text-blue-600 mr-2 mono not-italic">01/</span> Clinical Intake
+                    </h3>
+                    <div class="flex gap-2">
+                        <button onclick="activateVeto()" id="veto-btn" class="bg-red-600 hover:bg-red-700 text-white text-[10px] px-5 py-2.5 rounded-full font-black uppercase tracking-widest transition shadow-lg shadow-red-100">Manual Veto</button>
+                    </div>
+                </div>
+
+                <div id="veto-alert" class="hidden p-5 mb-8 bg-red-50 border-2 border-red-500 rounded-3xl text-center">
+                    <p class="text-red-700 text-[10px] font-black uppercase tracking-widest">🚨 LOCKDOWN: MOSES INTERVENTION ACTIVE 🚨</p>
+                </div>
+
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div class="space-y-2">
-                        <label class="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest ml-1">Account Link (Email)</label>
-                        <input type="email" id="email" placeholder="patient@rehab.link" class="w-full bg-slate-50 border border-slate-200 p-4 rounded-xl focus:ring-2 focus:ring-blue-200 outline-none transition">
+                        <label class="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Identity (Email)</label>
+                        <input type="email" id="email" placeholder="patient@clinic.ng" class="w-full bg-white border border-slate-100 p-4 rounded-2xl focus:ring-4 focus:ring-blue-50 outline-none transition font-medium">
                     </div>
                     <div class="space-y-2">
-                        <label class="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest ml-1">Primary Impairment</label>
-                        <select id="main-issue" class="w-full bg-slate-50 border border-slate-200 p-4 rounded-xl text-slate-500 outline-none focus:ring-2 focus:ring-blue-200">
-                            <option value="">Select Deficiency...</option>
-                            <option value="Stroke Recovery">Stroke / Hemiplegic Recovery</option>
+                        <label class="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Impairment Category</label>
+                        <select id="main-issue" onchange="triggerClinicalBranch(this.value)" class="w-full bg-white border border-slate-100 p-4 rounded-2xl text-slate-600 outline-none focus:ring-4 focus:ring-blue-50 font-medium">
+                            <option value="">Select Category...</option>
                             <option value="Sciatica/Back Pain">Neural Back Pain / Sciatica</option>
-                            <option value="Cervical Neuralgia">Cervical Neuralgia / Neck</option>
+                            <option value="Stroke Recovery">Stroke / Hemiplegic Recovery</option>
                             <option value="Geriatric Decline">Geriatric Functional Decline</option>
                         </select>
                     </div>
                 </div>
+
+                <div id="dynamic-questions" class="mt-8 hidden">
+                    <div class="p-8 bg-blue-50/50 rounded-3xl border border-blue-100 relative">
+                        <p class="text-[9px] font-black text-blue-500 mb-6 uppercase tracking-widest italic">// Differential Analysis</p>
+                        <div id="branch-content" class="space-y-6"></div>
+                    </div>
+                </div>
             </div>
 
-            <div class="mb-14 p-6 bg-red-50 rounded-2xl border border-red-100">
-                <div class="flex items-center mb-5">
-                    <span class="text-xl mr-3 text-red-500">⚠️</span>
-                    <p class="text-[11px] font-extrabold text-red-600 uppercase tracking-widest">Urgent: Check Any Active Symptoms</p>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm font-medium">
-                    <label class="flex items-center space-x-3 p-4 rounded-xl bg-white border border-slate-100 hover:border-red-200 cursor-pointer">
-                        <input type="checkbox" class="redflag-input redflag" value="Sudden Weakness"> <span class="text-slate-700">Sudden Motor Weakness</span>
+            <div class="mb-14 p-8 bg-slate-900 rounded-[32px] text-white">
+                <p class="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-6 italic">Systemic Review // Red Flags</p>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <label class="flex items-center space-x-3 p-4 bg-slate-800 rounded-2xl border border-slate-700 cursor-pointer hover:border-red-500 transition">
+                        <input type="checkbox" class="redflag w-5 h-5 rounded-md accent-red-600" value="Bladder Control">
+                        <span class="text-[11px] font-bold uppercase tracking-tight">Bladder Control Issue</span>
                     </label>
-                    <label class="flex items-center space-x-3 p-4 rounded-xl bg-white border border-slate-100 hover:border-red-200 cursor-pointer">
-                        <input type="checkbox" class="redflag-input redflag" value="Loss of Sensation"> <span class="text-slate-700">Sensory Deprivation</span>
-                    </label>
-                    <label class="flex items-center space-x-3 p-4 rounded-xl bg-white border border-slate-100 hover:border-red-200 cursor-pointer">
-                        <input type="checkbox" class="redflag-input redflag" value="Bladder Control"> <span class="text-slate-700">Autonomic Dysfunction</span>
-                    </label>
-                    <label class="flex items-center space-x-3 p-4 rounded-xl bg-white border border-slate-100 hover:border-red-200 cursor-pointer">
-                        <input type="checkbox" class="redflag-input redflag" value="Cognitive Lag"> <span class="text-slate-700">Cognitive/Speech Lag</span>
+                    <label class="flex items-center space-x-3 p-4 bg-slate-800 rounded-2xl border border-slate-700 cursor-pointer hover:border-red-500 transition">
+                        <input type="checkbox" class="redflag w-5 h-5 rounded-md accent-red-600" value="Saddle Numbness">
+                        <span class="text-[11px] font-bold uppercase tracking-tight">Saddle Anesthesia</span>
                     </label>
                 </div>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div class="bg-white p-8 rounded-3xl border border-blue-100 hover:border-blue-400 transition duration-300">
-                    <h3 class="text-xl font-extrabold text-blue-600 tracking-tight uppercase italic">Basic AI Scan</h3>
-                    <ul class="text-slate-500 text-xs mt-4 space-y-2 font-medium">
-                        <li>✦ Neural Posture Analysis</li>
-                        <li>✦ Provisional PT_Dave Report</li>
-                    </ul>
-                    <div class="mt-8 text-3xl font-extrabold text-blue-600 mono">₦5,000</div>
-                    <button onclick="pay(5000, 'Basic Scan')" class="mt-6 w-full bg-blue-600 hover:bg-blue-500 text-white font-extrabold py-4 rounded-2xl uppercase tracking-widest text-[11px] shadow-lg">Initiate Scan</button>
+                <div class="bg-white p-10 rounded-[40px] border border-slate-100 shadow-xl hover:translate-y-[-5px] transition-all">
+                    <h3 class="text-2xl font-black text-slate-900 tracking-tighter uppercase italic">AI Baseline</h3>
+                    <div class="mt-8 text-4xl font-black text-blue-600 mono">₦5,000</div>
+                    <button onclick="pay(5000, 'Baseline Scan')" class="mt-8 w-full bg-blue-600 text-white font-black py-5 rounded-2xl uppercase tracking-widest text-[10px] shadow-lg shadow-blue-100">Start Neural Link</button>
                 </div>
-
-                <div class="bg-white p-8 rounded-3xl border border-purple-100 hover:border-purple-400 transition duration-300">
-                    <h3 class="text-xl font-extrabold text-purple-600 tracking-tight uppercase italic">Specialist Link</h3>
-                    <ul class="text-slate-500 text-xs mt-4 space-y-2 font-medium">
-                        <li>✦ AI Scan + Human Expert Review</li>
-                        <li>✦ Priority WA Hotline Access</li>
-                    </ul>
-                    <div class="mt-8 text-3xl font-extrabold text-purple-600 mono">₦10,000</div>
-                    <button onclick="pay(10000, 'Specialist Triage')" class="mt-6 w-full bg-purple-600 hover:bg-purple-500 text-white font-extrabold py-4 rounded-2xl uppercase tracking-widest text-[11px] shadow-lg">Access Brain</button>
+                <div class="bg-white p-10 rounded-[40px] border border-slate-100 shadow-xl hover:translate-y-[-5px] transition-all">
+                    <h3 class="text-2xl font-black text-slate-900 tracking-tighter uppercase italic">Expert Link</h3>
+                    <div class="mt-8 text-4xl font-black text-purple-600 mono">₦10,000</div>
+                    <button onclick="pay(10000, 'Specialist Triage')" class="mt-8 w-full bg-purple-600 text-white font-black py-5 rounded-2xl uppercase tracking-widest text-[10px] shadow-lg shadow-purple-100">Access specialist</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <footer class="w-full py-16 px-6 border-t border-slate-100 bg-white mt-20 text-center">
-        <div class="max-w-4xl mx-auto space-y-3">
-            <p class="text-[9px] font-extrabold text-slate-500 tracking-[0.6em] uppercase mono italic">Neural Interface Verified</p>
-            <p class="text-xs text-slate-400">
-                © 2026 // <span class="font-extrabold text-slate-900 tracking-tighter italic uppercase">NoT_tHaT_kInD_oF_pHySiO</span> // <span class="mono font-bold text-blue-600 uppercase">PT_Dave</span>
-            </p>
-            <div class="h-6"></div> 
-        </div>
-    </footer>
-
     <script>
+        // --- 1. THE EVERLASTING HEART MATH ---
+        const pulseCanvas = document.getElementById('neural-pulse');
+        const pCtx = pulseCanvas.getContext('2d');
+        pulseCanvas.width = window.innerWidth;
+        pulseCanvas.height = window.innerHeight;
+
+        function drawEverlasting(t) {
+            pCtx.clearRect(0, 0, pulseCanvas.width, pulseCanvas.height);
+            pCtx.beginPath();
+            pCtx.strokeStyle = '#2563eb';
+            pCtx.lineWidth = 0.5;
+            for (let i = 0; i < Math.PI * 2; i += 0.02) {
+                let x = 16 * Math.pow(Math.sin(i), 3);
+                let y = -(13 * Math.cos(i) - 5 * Math.cos(2*i) - 2 * Math.cos(3*i) - Math.cos(4*i));
+                let drawX = pulseCanvas.width/2 + x * (12 + Math.sin(t) * 2);
+                let drawY = pulseCanvas.height/2 + y * (12 + Math.sin(t) * 2);
+                if (i === 0) pCtx.moveTo(drawX, drawY); else pCtx.lineTo(drawX, drawY);
+            }
+            pCtx.stroke();
+            requestAnimationFrame(() => drawEverlasting(t + 0.03));
+        }
+        drawEverlasting(0);
+
+        // --- 2. CLINICAL LOGIC & SAFETY ---
+        let isVetoActive = false;
+
+        function activateVeto() {
+            isVetoActive = true;
+            document.getElementById('veto-alert').classList.remove('hidden');
+            statusOverlay.innerText = "SYSTEM LOCK: PT INTERVENTION";
+            statusOverlay.style.background = "#ef4444";
+            window.open(`https://wa.me/2349033325615?text=🚨 EMERGENCY VETO TRIGGERED: Requesting manual triage review.`, '_blank');
+        }
+
+        function triggerClinicalBranch(issue) {
+            const container = document.getElementById('dynamic-questions');
+            const content = document.getElementById('branch-content');
+            container.classList.remove('hidden');
+            if (issue === "Sciatica/Back Pain") {
+                content.innerHTML = `
+                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-2">Pain exacerbation on Valsalva (Cough/Sneeze)?</label>
+                    <select class="w-full p-4 rounded-xl border text-sm font-bold bg-white mb-4"><option>No Change</option><option>Radiating Sharp Pain</option></select>
+                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-2">Night Pain Level (1-10)</label>
+                    <input type="range" class="w-full accent-blue-600">
+                `;
+            } else {
+                content.innerHTML = `<p class="text-xs font-bold text-slate-400 uppercase italic">Loading specific neural protocol...</p>`;
+            }
+        }
+
+        document.querySelectorAll('.redflag').forEach(box => {
+            box.addEventListener('change', function() {
+                if (this.checked) {
+                    activateVeto();
+                    window.open(`https://wa.me/2349033325615?text=🚨 RED FLAG DETECTED: ${this.value}. Initiating specialist contact.`, '_blank');
+                }
+            });
+        });
+
+        function pay(amount, tier) {
+            const email = document.getElementById('email').value;
+            if (!email.includes('@')) { alert("Identity Required."); return; }
+            PaystackPop.setup({
+                key: 'pk_live_ef67461cd9b75a09bf05c7c5c588dea850470cdf',
+                email: email, amount: amount * 100, currency: "NGN",
+                callback: function(res) {
+                    window.location.href = `https://wa.me/2349033325615?text=🚀 REHAB_SESSION_AUTHORIZED: ${tier}. Email: ${email}`;
+                }
+            }).openIframe();
+        }
+
+        // --- 3. NEURAL SCANNING ---
         const videoElement = document.getElementById('input_video');
         const canvasElement = document.getElementById('output_canvas');
         const canvasCtx = canvasElement.getContext('2d');
         const statusOverlay = document.getElementById('status-overlay');
 
-        function pay(amount, tier) {
-            const email = document.getElementById('email').value;
-            const issue = document.getElementById('main-issue').value || "Undiagnosed";
-            const flags = Array.from(document.querySelectorAll('.redflag:checked')).map(f => f.value).join(', ') || "None Detected";
-
-            if (!email || !email.includes('@')) { alert("A Neural Identity (Email) is required."); return; }
-            
-            let handler = PaystackPop.setup({
-                key: 'pk_live_ef67461cd9b75a09bf05c7c5c588dea850470cdf',
-                email: email,
-                amount: amount * 100,
-                currency: "NGN",
-                callback: function(response) {
-                    const msg = `Hi PT_Dave, payment confirmed for ${tier}.%0A%0AComplaint: ${issue}%0ASafety Flags: ${flags}%0AEmail: ${email}`;
-                    window.location.href = `https://wa.me/2349033325615?text=${msg}`;
-                }
-            });
-            handler.openIframe();
-        }
-
         function onResults(results) {
-            statusOverlay.innerText = "PT_DAVE: SCAN ACTIVE";
+            if (isVetoActive) return;
             canvasCtx.save();
             canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
             canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
@@ -212,9 +217,7 @@
         const pose = new Pose({ locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}` });
         pose.setOptions({ modelComplexity: 1, smoothLandmarks: true, minDetectionConfidence: 0.6 });
         pose.onResults(onResults);
-        
-        const camera = new Camera(videoElement, { onFrame: async () => { await pose.send({image: videoElement}); }, width: 640, height: 480 });
-        camera.start();
+        new Camera(videoElement, { onFrame: async () => { await pose.send({image: videoElement}); }, width: 640, height: 480 }).start();
     </script>
 </body>
 </html>
