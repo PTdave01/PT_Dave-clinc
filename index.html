@@ -2,197 +2,153 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>NoT_tHaT_kInD_oF_pHySiO // PT_Dave AI</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NTKOP | Diagnostic Portal</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils"></script>
-    <script src="https://js.paystack.co/v1/inline.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;500;700;800&family=Space+Mono&display=swap');
-        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f8fafc; color: #1e293b; overflow-x: hidden; margin: 0; padding: 0; }
-        .mono { font-family: 'Space Mono', monospace; }
-        #neural-pulse { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; opacity: 0.1; pointer-events: none; }
-        
-        .brand-header { font-size: 1.1rem; line-height: 1.1; }
-        @media (min-width: 768px) { .brand-header { font-size: 2.2rem; } }
-
-        .video-container { position: relative; width: 88%; max-width: 320px; aspect-ratio: 4/3; margin: 0 auto 10px; border-radius: 20px; overflow: hidden; background: #000; border: 2px solid rgba(37, 99, 235, 0.2); }
-        #output_canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 5; }
-        #input_video { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); visibility: hidden; }
-        
-        .premium-card { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border-radius: 24px; border: 1px solid rgba(255, 255, 255, 0.5); padding: 12px; }
-        
-        .veto-disabled { background-color: #f1f5f9; color: #cbd5e1; cursor: not-allowed; border: 1px solid #e2e8f0; pointer-events: none; }
-        .veto-active { background-color: #ef4444 !important; color: white !important; cursor: pointer !important; border: none !important; animation: pulse-red 2s infinite; opacity: 1; }
-        
-        @keyframes pulse-red {
-            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
-            70% { transform: scale(1.02); box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
-            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
-        }
-
-        .red-check { width: 14px; height: 14px; }
+        body { background-color: #050505; color: #ffffff; font-family: ui-sans-serif, system-ui; overflow-x: hidden; }
+        .glass { background: rgba(23, 23, 23, 0.8); backdrop-filter: blur(12px); border: 1px solid #333; }
+        #video-container { position: relative; width: 100%; aspect-ratio: 3/4; background: #000; border-radius: 1.5rem; overflow: hidden; border: 2px solid #222; }
+        video { transform: scaleX(-1); width: 100%; height: 100%; object-fit: cover; }
+        canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; transform: scaleX(-1); }
+        .scanning-bar { position: absolute; width: 100%; height: 4px; background: linear-gradient(to bottom, transparent, #22c55e); box-shadow: 0 4px 10px #22c55e; animation: scan 3s linear infinite; }
+        @keyframes scan { 0% { top: 0; } 100% { top: 100%; } }
     </style>
 </head>
-<body class="flex flex-col min-h-screen pt-2">
-    <canvas id="neural-pulse"></canvas>
-    <div class="max-w-xl mx-auto p-3 flex-grow w-full">
-        <div class="text-center mb-2">
-            <h1 class="brand-header font-extrabold text-slate-900 italic uppercase tracking-tighter">NoT_tHaT_kInD_oF_pHySiO</h1>
-            <p class="text-blue-600 mono text-[7px] tracking-[0.3em] uppercase font-black italic">Neural Interface v3.2</p>
+<body class="p-4 max-w-lg mx-auto">
+    
+    <header class="text-center py-8">
+        <h1 class="text-2xl font-black tracking-widest uppercase italic">NoT_tHaT_kInD_oF_pHySiO</h1>
+        <p class="text-[10px] text-green-500 tracking-[0.3em] font-bold mt-1">HIGH-TECH CLINICAL VISION</p>
+    </header>
+
+    <div id="video-container" class="mb-6 shadow-2xl shadow-green-900/10">
+        <div class="scanning-bar"></div>
+        <video id="webcam" autoplay playsinline></video>
+        <canvas id="output_canvas"></canvas>
+    </div>
+
+    <div class="grid grid-cols-2 gap-4 mb-6">
+        <div class="glass p-5 rounded-3xl text-center">
+            <p class="text-[10px] text-gray-500 uppercase font-bold mb-1">Joint Angle</p>
+            <span id="angleDisplay" class="text-5xl font-mono font-black text-green-400">--°</span>
         </div>
-
-        <div class="video-container">
-            <video id="input_video" playsinline></video>
-            <canvas id="output_canvas"></canvas>
-        </div>
-
-        <div class="premium-card shadow-lg">
-            <div class="flex justify-between items-center mb-3">
-                <h3 class="text-[9px] font-black text-slate-900 uppercase italic">Clinical Intake</h3>
-                <button id="veto-btn" onclick="triggerVetoAction()" class="veto-disabled text-[7px] px-4 py-1.5 rounded-full font-black uppercase transition-all duration-500" disabled>Manual Veto</button>
-            </div>
-
-            <div class="space-y-2">
-                <input type="email" id="email" placeholder="Identity (Email)" class="w-full bg-white border border-slate-100 p-2.5 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-100">
-                
-                <select id="main-issue" class="w-full bg-white border border-slate-100 p-2.5 rounded-xl text-xs font-bold text-slate-700">
-                    <option value="">Select Condition...</option>
-                    <optgroup label="Neurological">
-                        <option value="Stroke">Stroke / Hemiplegia</option>
-                        <option value="Sciatica">Sciatica / Nerve compression</option>
-                        <option value="Parkinsons">Parkinson’s Disease</option>
-                        <option value="CerebralPalsy">Cerebral Palsy</option>
-                    </optgroup>
-                    <optgroup label="Musculoskeletal">
-                        <option value="LBP">Chronic Low Back Pain</option>
-                        <option value="Neck">Cervical Spondylosis</option>
-                        <option value="OA">Osteoarthritis (Knee/Hip)</option>
-                        <option value="Shoulder">Frozen Shoulder / Rotator Cuff</option>
-                    </optgroup>
-                    <optgroup label="Geriatric">
-                        <option value="Balance">Balance & Falls</option>
-                        <option value="Frailty">Functional Decline</option>
-                    </optgroup>
-                </select>
-            </div>
-
-            <div class="mt-3 p-3 bg-slate-900 rounded-xl">
-                <p class="text-[7px] font-black text-blue-400 uppercase tracking-widest mb-2 italic">Safety Triage (Red Flags)</p>
-                <div class="grid grid-cols-2 gap-x-2 gap-y-1.5">
-                    <label class="flex items-center space-x-1.5 text-white/90 text-[9px] font-bold">
-                        <input type="checkbox" class="red-check accent-red-600" value="Bladder"> <span>Bladder Issue</span>
-                    </label>
-                    <label class="flex items-center space-x-1.5 text-white/90 text-[9px] font-bold">
-                        <input type="checkbox" class="red-check accent-red-600" value="Saddle"> <span>Saddle Numbness</span>
-                    </label>
-                    <label class="flex items-center space-x-1.5 text-white/90 text-[9px] font-bold">
-                        <input type="checkbox" class="red-check accent-red-600" value="NightPain"> <span>Unremitting Night Pain</span>
-                    </label>
-                    <label class="flex items-center space-x-1.5 text-white/90 text-[9px] font-bold">
-                        <input type="checkbox" class="red-check accent-red-600" value="WeightLoss"> <span>Sudden Weight Loss</span>
-                    </label>
-                    <label class="flex items-center space-x-1.5 text-white/90 text-[9px] font-bold">
-                        <input type="checkbox" class="red-check accent-red-600" value="BilateralWeakness"> <span>Bilateral Weakness</span>
-                    </label>
-                    <label class="flex items-center space-x-1.5 text-white/90 text-[9px] font-bold">
-                        <input type="checkbox" class="red-check accent-red-600" value="Fever"> <span>Fever / Chills</span>
-                    </label>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-2 gap-3 mt-4">
-                <button onclick="pay(5000, 'Baseline')" class="bg-blue-600 text-white text-[9px] font-black py-3 rounded-xl uppercase">Scan (₦5k)</button>
-                <button onclick="pay(10000, 'Expert')" class="bg-purple-600 text-white text-[9px] font-black py-3 rounded-xl uppercase">Expert (₦10k)</button>
-            </div>
+        <div class="glass p-5 rounded-3xl text-center flex flex-col justify-center">
+            <p class="text-[10px] text-gray-500 uppercase font-bold mb-1">Clinic Status</p>
+            <span id="statusDisplay" class="text-xs font-black uppercase tracking-tighter text-gray-400">System Ready</span>
         </div>
     </div>
 
-    <script>
-        // HEART MATH
-        const pulseCanvas = document.getElementById('neural-pulse');
-        const pCtx = pulseCanvas.getContext('2d');
-        pulseCanvas.width = window.innerWidth; pulseCanvas.height = window.innerHeight;
-        function drawEverlasting(t) {
-            pCtx.clearRect(0, 0, pulseCanvas.width, pulseCanvas.height);
-            pCtx.beginPath(); pCtx.strokeStyle = '#2563eb'; pCtx.lineWidth = 0.5;
-            for (let i = 0; i < Math.PI * 2; i += 0.02) {
-                let x = 16 * Math.pow(Math.sin(i), 3);
-                let y = -(13 * Math.cos(i) - 5 * Math.cos(2*i) - 2 * Math.cos(3*i) - Math.cos(4*i));
-                let drawX = pulseCanvas.width/2 + x * (7 + Math.sin(t) * 2);
-                let drawY = pulseCanvas.height/2 + y * (7 + Math.sin(t) * 2);
-                if (i === 0) pCtx.moveTo(drawX, drawY); else pCtx.lineTo(drawX, drawY);
-            }
-            pCtx.stroke(); requestAnimationFrame(() => drawEverlasting(t + 0.03));
-        }
-        drawEverlasting(0);
+    <div class="glass p-2 rounded-2xl mb-8">
+        <input id="patientName" type="text" placeholder="PATIENT IDENTIFIER" class="w-full bg-transparent p-4 focus:outline-none text-center uppercase text-sm tracking-widest font-bold">
+    </div>
 
-        let paymentConfirmed = false;
-        let redFlagPresent = false;
+    <div class="flex flex-col gap-4 mb-12">
+        <button id="webcamButton" class="w-full bg-white text-black font-black py-5 rounded-2xl active:scale-95 transition-all uppercase tracking-widest text-sm">Start AI Engine</button>
+        <button id="saveButton" class="w-full bg-green-600 text-white font-black py-5 rounded-2xl active:scale-95 transition-all uppercase tracking-widest text-sm shadow-xl shadow-green-900/40">Sync to Frankfurt</button>
+    </div>
 
-        function updateVetoStatus() {
-            const btn = document.getElementById('veto-btn');
-            if (paymentConfirmed && redFlagPresent) {
-                btn.disabled = false;
-                btn.className = "veto-active text-[7px] px-4 py-1.5 rounded-full font-black uppercase transition-all duration-500";
-                btn.innerText = "CONTACT MOSES";
-            } else {
-                btn.disabled = true;
-                btn.className = "veto-disabled text-[7px] px-4 py-1.5 rounded-full font-black uppercase transition-all duration-500";
-                btn.innerText = "Manual Veto";
-            }
-        }
+    <script type="module">
+        import { PoseLandmarker, FilesetResolver, DrawingUtils } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0";
 
-        document.querySelectorAll('.red-check').forEach(box => {
-            box.addEventListener('change', function() {
-                redFlagPresent = Array.from(document.querySelectorAll('.red-check:checked')).length > 0;
-                updateVetoStatus();
+        // --- 1. SUPABASE CONNECTION ---
+        const SUPABASE_URL = "https://yrqlaljrceyupuptrniaj.supabase.co";
+        const SUPABASE_KEY = "sb_publishable_0fSp1dxo-j6tnSfpBeAZ5Q_SMQebX19"; 
+    const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        // --- 2. ELEMENTS & STATE ---
+        const video = document.getElementById("webcam");
+        const canvasElement = document.getElementById("output_canvas");
+        const canvasCtx = canvasElement.getContext("2d");
+        const angleDisplay = document.getElementById("angleDisplay");
+        const statusDisplay = document.getElementById("statusDisplay");
+
+        let poseLandmarker;
+        let webcamRunning = false;
+        let lastAngle = 0;
+        let lastStatus = "Awaiting";
+
+        // --- 3. AI INITIALIZATION ---
+        const initAI = async () => {
+            const vision = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0/wasm");
+            poseLandmarker = await PoseLandmarker.createFromOptions(vision, {
+                baseOptions: { 
+                    modelAssetPath: `https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task`, 
+                    delegate: "GPU" 
+                },
+                runningMode: "VIDEO"
             });
-        });
+            statusDisplay.innerText = "AI Ready";
+        };
+        initAI();
 
-        function triggerVetoAction() {
-            const flags = Array.from(document.querySelectorAll('.red-check:checked')).map(b => b.value).join(", ");
-            const msg = encodeURIComponent(`🚨 AUTHORIZED VETO 🚨\nPayment verified. Red Flags detected: ${flags}. Moses, I need immediate clinical intervention.`);
-            window.location.href = `https://wa.me/2349033325615?text=${msg}`;
-        }
+        const getAngle = (a, b, c) => {
+            let rad = Math.atan2(c.y - b.y, c.x - b.x) - Math.atan2(a.y - b.y, a.x - b.x);
+            let ang = Math.abs(rad * 180.0 / Math.PI);
+            return ang > 180 ? 360 - ang : ang;
+        };
 
-        function pay(amount, tier) {
-            const email = document.getElementById('email').value;
-            if (!email.includes('@')) { alert("Email Required."); return; }
-            PaystackPop.setup({
-                key: 'pk_live_ef67461cd9b75a09bf05c7c5c588dea850470cdf',
-                email: email, amount: amount * 100, currency: "NGN",
-                callback: function(res) { 
-                    paymentConfirmed = true;
-                    updateVetoStatus();
-                    if (!redFlagPresent) {
-                        window.location.href = `https://wa.me/2349033325615?text=REHAB_AUTHORIZED_${tier}`; 
-                    } else {
-                        alert("Payment confirmed. Please use the 'CONTACT MOSES' button now active above.");
-                    }
-                }
-            }).openIframe();
-        }
+        async function predict() {
+            if (!webcamRunning) return;
+            canvasElement.width = video.videoWidth;
+            canvasElement.height = video.videoHeight;
 
-        const videoElement = document.getElementById('input_video');
-        const canvasElement = document.getElementById('output_canvas');
-        const canvasCtx = canvasElement.getContext('2d');
-        function onResults(results) {
-            canvasCtx.save();
+            const results = poseLandmarker.detectForVideo(video, performance.now());
             canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-            canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
-            if (results.poseLandmarks) {
-                drawConnectors(canvasCtx, results.poseLandmarks, POSE_CONNECTIONS, {color: '#2563eb', lineWidth: 2});
-                drawLandmarks(canvasCtx, results.poseLandmarks, {color: '#ffffff', lineWidth: 1, radius: 1});
+
+            if (results.landmarks && results.landmarks.length > 0) {
+                const pts = results.landmarks[0];
+                const hip = pts[24]; const knee = pts[26]; const ankle = pts[28];
+                
+                const ang = getAngle(hip, knee, ankle).toFixed(1);
+                lastAngle = parseFloat(ang);
+                angleDisplay.innerText = `${ang}°`;
+                
+                lastStatus = ang > 150 ? "Full Extension" : (ang < 90 ? "Deep Flexion" : "Mid-Range");
+                statusDisplay.innerText = lastStatus;
+                statusDisplay.className = "text-xs font-black uppercase text-green-400";
+
+                const du = new DrawingUtils(canvasCtx);
+                du.drawConnectors(pts, PoseLandmarker.POSE_CONNECTIONS, { color: '#ffffff33', lineWidth: 2 });
+                du.drawLandmarks([hip, knee, ankle], { color: '#22c55e', lineWidth: 4, radius: 6 });
             }
-            canvasCtx.restore();
+            requestAnimationFrame(predict);
         }
-        const pose = new Pose({ locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}` });
-        pose.setOptions({ modelComplexity: 1, smoothLandmarks: true, minDetectionConfidence: 0.6 });
-        pose.onResults(onResults);
-        new Camera(videoElement, { onFrame: async () => { await pose.send({image: videoElement}); }, width: 640, height: 480 }).start();
+
+        // --- 4. ACTION TRIGGERS ---
+        document.getElementById("webcamButton").onclick = async () => {
+            if (!webcamRunning) {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+                video.srcObject = stream;
+                webcamRunning = true;
+                predict();
+                document.getElementById("webcamButton").innerText = "Kill Scanner";
+                document.getElementById("webcamButton").className = "w-full bg-zinc-800 text-red-500 font-black py-5 rounded-2xl uppercase tracking-widest text-sm border border-red-900/30";
+            } else {
+                location.reload(); // Quick reset
+            }
+        };
+
+        document.getElementById("saveButton").onclick = async () => {
+            const name = document.getElementById("patientName").value || "Walk-in Patient";
+            statusDisplay.innerText = "Syncing...";
+            
+            const { error } = await _supabase.from('patient_scans').insert([{ 
+                patient_name: name, 
+                joint_type: 'Knee', 
+                angle_detected: lastAngle, 
+                risk_status: lastStatus 
+            }]);
+
+            if (error) {
+                alert("Sync Failed: " + error.message);
+                statusDisplay.innerText = "Error";
+            } else {
+                alert("✅ SUCCESS: Data Secured in Frankfurt Database.");
+                statusDisplay.innerText = "Data Synced";
+            }
+        };
     </script>
 </body>
 </html>
