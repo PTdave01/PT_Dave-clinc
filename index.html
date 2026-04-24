@@ -2,87 +2,127 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NTKOP | Secure Portal</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>NTKOP | Secure Clinical Portal</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { background-color: #050505; color: #fff; font-family: sans-serif; }
+        body { background-color: #050505; color: #fff; font-family: sans-serif; overflow-x: hidden; }
         .glass { background: #111; border: 1px solid #222; border-radius: 1.5rem; }
         #video-container { position: relative; width: 100%; aspect-ratio: 1; background: #000; border-radius: 2rem; overflow: hidden; border: 2px solid #333; }
         video, canvas { position: absolute; width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+        /* Custom Keypad Styles */
+        .keypad-btn { background: #1a1a1a; width: 60px; height: 60px; border-radius: 50%; font-size: 1.5rem; font-weight: 700; display: flex; align-items: center; justify-content: center; transition: all 0.1s; border: 1px solid #333; }
+        .keypad-btn:active { background: #333; scale: 0.9; }
+        .dot { width: 12px; height: 12px; border-radius: 50%; border: 1px solid #444; transition: background 0.2s; }
+        .dot.filled { background: #22c55e; border-color: #22c55e; }
     </style>
 </head>
 <body class="p-4 max-w-xl mx-auto">
 
-    <nav class="flex justify-center gap-8 mb-8">
-        <button id="nav-scanner" onclick="switchTab('scanner')" class="text-xs font-black border-b-2 border-green-500 pb-1 tracking-widest text-green-500">SCANNER</button>
-        <button id="nav-records" onclick="unlockRecords()" class="text-xs font-black text-gray-600 pb-1 tracking-widest uppercase">Clinical Records 🔒</button>
+    <nav class="flex justify-between items-center mb-8 px-2">
+        <h1 class="text-xs font-black tracking-[0.3em] text-zinc-600 uppercase">NTKOP System</h1>
+        <button id="nav-records" onclick="showKeypad()" class="text-[10px] font-black bg-zinc-900 border border-zinc-800 px-4 py-2 rounded-full tracking-widest uppercase">Admin Records 🔒</button>
     </nav>
 
     <div id="tab-scanner">
-        <div id="video-container" class="mb-6">
+        <div id="video-container" class="mb-6 shadow-2xl shadow-green-900/10">
             <video id="webcam" autoplay playsinline></video>
             <canvas id="output_canvas"></canvas>
         </div>
-
         <div class="grid grid-cols-2 gap-4 mb-6 text-center">
-            <div class="glass p-6"><p class="text-[10px] text-gray-500 uppercase mb-1">Live Angle</p><h2 id="angleDisplay" class="text-5xl font-black italic">--°</h2></div>
-            <div id="riskCard" class="glass p-6 border-l-4 border-gray-700"><p class="text-[10px] text-gray-500 uppercase mb-1">Risk Status</p><h2 id="riskDisplay" class="text-xs font-black uppercase tracking-tighter">Ready</h2></div>
+            <div class="glass p-6"><p class="text-[10px] text-zinc-500 uppercase font-bold mb-1 tracking-widest">Angle</p><h2 id="angleDisplay" class="text-5xl font-black italic">--°</h2></div>
+            <div id="riskCard" class="glass p-6 border-l-4 border-zinc-800"><p class="text-[10px] text-zinc-500 uppercase font-bold mb-1 tracking-widest">Status</p><h2 id="riskDisplay" class="text-xs font-black uppercase tracking-tighter">Standby</h2></div>
         </div>
+        <div class="glass p-4 mb-4"><input id="patientID" type="text" placeholder="PATIENT ID" class="w-full bg-transparent text-center text-sm font-bold outline-none uppercase tracking-widest placeholder:text-zinc-700"></div>
+        <button id="webcamButton" class="w-full bg-white text-black py-5 rounded-2xl mb-3 font-black uppercase text-xs tracking-widest">Open AI Scanner</button>
+        <button id="saveButton" class="w-full bg-green-600 text-white py-5 rounded-2xl font-black uppercase text-xs shadow-lg shadow-green-900/20 tracking-widest">Sync to Frankfurt</button>
+    </div>
 
-        <div class="glass p-4 mb-4"><input id="patientID" type="text" placeholder="Patient Identifier" class="w-full bg-transparent text-center text-sm font-bold outline-none uppercase tracking-widest"></div>
-        <button id="webcamButton" class="w-full bg-white text-black py-5 rounded-2xl mb-3 font-black uppercase text-xs">Start AI Engine</button>
-        <button id="saveButton" class="w-full bg-green-600 text-white py-5 rounded-2xl font-black uppercase text-xs shadow-lg shadow-green-900/20">Sync to Frankfurt</button>
+    <div id="keypad-overlay" class="fixed inset-0 bg-black/95 z-50 hidden flex flex-col items-center justify-center p-6">
+        <p class="text-xs font-black tracking-widest text-zinc-500 mb-8 uppercase">Enter Physio Passcode</p>
+        <div class="flex gap-4 mb-12">
+            <div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div>
+        </div>
+        <div class="grid grid-cols-3 gap-6">
+            <button class="keypad-btn" onclick="pressKey('1')">1</button>
+            <button class="keypad-btn" onclick="pressKey('2')">2</button>
+            <button class="keypad-btn" onclick="pressKey('3')">3</button>
+            <button class="keypad-btn" onclick="pressKey('4')">4</button>
+            <button class="keypad-btn" onclick="pressKey('5')">5</button>
+            <button class="keypad-btn" onclick="pressKey('6')">6</button>
+            <button class="keypad-btn" onclick="pressKey('7')">7</button>
+            <button class="keypad-btn" onclick="pressKey('8')">8</button>
+            <button class="keypad-btn" onclick="pressKey('9')">9</button>
+            <button class="keypad-btn text-xs text-red-500" onclick="hideKeypad()">ESC</button>
+            <button class="keypad-btn" onclick="pressKey('0')">0</button>
+            <button class="keypad-btn text-xs text-zinc-500" onclick="clearKeypad()">CLR</button>
+        </div>
     </div>
 
     <div id="tab-records" class="hidden">
-        <div class="glass p-6 border-t-4 border-blue-500">
-            <div class="flex justify-between items-center mb-6">
-                <h3 class="text-lg font-black tracking-tighter italic">SECURE RECORDS</h3>
-                <button onclick="lockAgain()" class="text-[10px] bg-zinc-800 px-3 py-1 rounded-lg">LOCK EXIT</button>
+        <div class="glass p-6 border-t-4 border-blue-600">
+            <div class="flex justify-between items-center mb-8">
+                <h3 class="text-lg font-black italic tracking-tighter">CLINICAL VAULT</h3>
+                <button onclick="exitRecords()" class="text-[10px] bg-red-900/20 text-red-500 px-4 py-2 rounded-full font-bold">LOCK VAULT</button>
             </div>
-            <div class="flex gap-2 mb-6">
-                <input id="searchID" type="text" placeholder="ENTER ID" class="flex-1 bg-zinc-900 border border-zinc-800 rounded-xl p-4 text-sm font-bold outline-none">
-                <button onclick="fetchRecords()" class="bg-white text-black px-6 rounded-xl font-black text-xs uppercase">Find</button>
+            <div class="flex gap-2 mb-8">
+                <input id="searchID" type="text" placeholder="SEARCH ID" class="flex-1 bg-zinc-900 border border-zinc-800 rounded-2xl p-4 text-sm font-bold outline-none uppercase">
+                <button onclick="fetchRecords()" class="bg-white text-black px-6 rounded-2xl font-black text-xs uppercase">Find</button>
             </div>
-            <div id="resultsList" class="space-y-3">
-                <p class="text-center text-gray-600 py-10 text-xs italic">Awaiting secure query...</p>
-            </div>
+            <div id="resultsList" class="space-y-4"></div>
         </div>
     </div>
 
     <script type="module">
         import { PoseLandmarker, FilesetResolver, DrawingUtils } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0";
 
-        // --- CONFIGURATION ---
         const SUPABASE_URL = "https://yrqlaljrceyupuptrniaj.supabase.co";
-        const SUPABASE_KEY = "sb_publishable_0fSp1dxo-j6tnSfpBeAZ5Q_SMQebX19"; // Put your key here
-        const MASTER_PIN = "180808"; // CHANGE THIS TO YOUR SECRET CODE
+        const SUPABASE_KEY = "sb_publishable_0fSp1dxo-j6tnSfpBeAZ5Q_SMQebX19"; 
+        const MASTER_PASSCODE = "180808"; // SET YOUR 4-DIGIT CODE HERE
         
         const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-        let poseLandmarker; let webcamRunning = false; let lastAngle = 0; let lastStatus = "Awaiting";
+        let currentPasscode = "";
 
-        // --- SECURITY LOGIC ---
-        window.unlockRecords = () => {
-            const entry = prompt("Clinical Access Required. Enter PIN:");
-            if (entry === MASTER_PIN) {
-                switchTab('records');
-            } else {
-                alert("ACCESS DENIED: Credentials Invalid.");
+        // --- PASSCODE LOGIC ---
+        window.showKeypad = () => { document.getElementById('keypad-overlay').classList.remove('hidden'); };
+        window.hideKeypad = () => { clearKeypad(); document.getElementById('keypad-overlay').classList.add('hidden'); };
+        window.clearKeypad = () => { currentPasscode = ""; updateDots(); };
+        
+        window.pressKey = (num) => {
+            if (currentPasscode.length < 4) {
+                currentPasscode += num;
+                updateDots();
+                if (currentPasscode.length === 4) {
+                    setTimeout(() => {
+                        if (currentPasscode === MASTER_PASSCODE) {
+                            hideKeypad();
+                            document.getElementById('tab-scanner').classList.add('hidden');
+                            document.getElementById('tab-records').classList.remove('hidden');
+                        } else {
+                            alert("INVALID PASSCODE");
+                            clearKeypad();
+                        }
+                    }, 200);
+                }
             }
         };
 
-        window.lockAgain = () => { switchTab('scanner'); };
+        function updateDots() {
+            const dots = document.querySelectorAll('.dot');
+            dots.forEach((dot, i) => {
+                dot.classList.toggle('filled', i < currentPasscode.length);
+            });
+        }
 
-        window.switchTab = (tab) => {
-            document.getElementById('tab-scanner').classList.toggle('hidden', tab !== 'scanner');
-            document.getElementById('tab-records').classList.toggle('hidden', tab !== 'records');
-            document.getElementById('nav-scanner').className = tab === 'scanner' ? "text-xs font-black border-b-2 border-green-500 pb-1 text-green-500" : "text-xs font-black text-gray-600 pb-1";
-            document.getElementById('nav-records').className = tab === 'records' ? "text-xs font-black border-b-2 border-blue-500 pb-1 text-blue-500" : "text-xs font-black text-gray-600 pb-1";
+        window.exitRecords = () => {
+            document.getElementById('tab-records').classList.add('hidden');
+            document.getElementById('tab-scanner').classList.remove('hidden');
         };
 
-        // --- AI & DB LOGIC ---
+        // --- SCANNER LOGIC (Original) ---
+        let poseLandmarker; let webcamRunning = false; let lastAngle = 0; let lastStatus = "Awaiting";
+
         const init = async () => {
             const vision = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0/wasm");
             poseLandmarker = await PoseLandmarker.createFromOptions(vision, {
@@ -101,24 +141,20 @@
             canvas.width = video.videoWidth; canvas.height = video.videoHeight;
             const results = poseLandmarker.detectForVideo(video, performance.now());
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-
             if (results.landmarks && results.landmarks[0]) {
                 const pts = results.landmarks[0];
                 const hip = pts[24]; const knee = pts[26]; const ankle = pts[28];
                 const rad = Math.atan2(ankle.y - knee.y, ankle.x - knee.x) - Math.atan2(hip.y - knee.y, hip.x - knee.x);
                 let ang = Math.abs(rad * 180.0 / Math.PI);
                 ang = ang > 180 ? 360 - ang : ang;
-                
                 lastAngle = ang.toFixed(1);
                 document.getElementById("angleDisplay").innerText = `${lastAngle}°`;
-
                 const card = document.getElementById("riskCard");
                 const disp = document.getElementById("riskDisplay");
-                if (lastAngle < 90) { lastStatus = "RED: LOW ROM"; disp.innerText = "RED FLAG"; card.style.borderColor = "#ef4444"; }
-                else if (lastAngle < 120) { lastStatus = "YELLOW: STIFF"; disp.innerText = "CAUTION"; card.style.borderColor = "#eab308"; }
-                else { lastStatus = "GREEN: OPTIMAL"; disp.innerText = "OPTIMAL"; card.style.borderColor = "#22c55e"; }
-
-                new DrawingUtils(ctx).drawConnectors(pts, PoseLandmarker.POSE_CONNECTIONS, { color: '#ffffff33', lineWidth: 1 });
+                if (lastAngle < 90) { lastStatus = "DANGER"; disp.innerText = "RED FLAG"; card.style.borderColor = "#ef4444"; }
+                else if (lastAngle < 120) { lastStatus = "CAUTION"; disp.innerText = "YELLOW"; card.style.borderColor = "#eab308"; }
+                else { lastStatus = "OPTIMAL"; disp.innerText = "GREEN"; card.style.borderColor = "#22c55e"; }
+                new DrawingUtils(ctx).drawConnectors(pts, PoseLandmarker.POSE_CONNECTIONS, { color: '#ffffff22', lineWidth: 1 });
                 new DrawingUtils(ctx).drawLandmarks([hip, knee, ankle], { color: '#22c55e', lineWidth: 4 });
             }
             requestAnimationFrame(predict);
@@ -128,7 +164,7 @@
             if (!webcamRunning) {
                 const stream = await navigator.mediaDevices.getUserMedia({ video: true });
                 video.srcObject = stream; webcamRunning = true; predict();
-                document.getElementById("webcamButton").innerText = "KILL ENGINE";
+                document.getElementById("webcamButton").innerText = "KILL SYSTEM";
             } else { location.reload(); }
         };
 
@@ -137,23 +173,20 @@
             const { error } = await _supabase.from('patient_scans').insert([{ 
                 patient_name: id, joint_type: 'Knee', angle_detected: lastAngle, risk_status: lastStatus 
             }]);
-            alert(error ? "Sync Error" : "✅ SYNCED TO FRANKFURT");
+            alert(error ? "Sync Error" : "✅ DATA SECURED");
         };
 
         window.fetchRecords = async () => {
             const id = document.getElementById("searchID").value;
             const list = document.getElementById("resultsList");
-            list.innerHTML = "<p class='text-center animate-pulse text-[10px] tracking-widest'>QUERYING FRANKFURT DATABASE...</p>";
-            
-            const { data, error } = await _supabase.from('patient_scans')
-                .select('*').eq('patient_name', id).order('created_at', { ascending: false }).limit(5);
-            
-            if (!data || data.length === 0) list.innerHTML = "<p class='text-center text-red-500 py-10 text-[10px] font-bold'>NO CLINICAL DATA FOUND FOR THIS ID.</p>";
+            list.innerHTML = "<p class='text-center animate-pulse text-[10px] tracking-widest text-zinc-500'>RETRIEVING FROM FRANKFURT...</p>";
+            const { data } = await _supabase.from('patient_scans').select('*').eq('patient_name', id).order('created_at', { ascending: false }).limit(5);
+            if (!data || data.length === 0) list.innerHTML = "<p class='text-center text-red-500 py-10 text-[10px] font-bold'>NO RECORDS FOUND.</p>";
             else {
                 list.innerHTML = data.map(r => `
-                    <div class="bg-zinc-900 p-4 rounded-2xl flex justify-between items-center border border-zinc-800">
-                        <div><p class="text-[10px] text-gray-500 uppercase font-bold">${new Date(r.created_at).toLocaleDateString()}</p><p class="font-black text-xl">${r.angle_detected}°</p></div>
-                        <span class="text-[10px] font-black uppercase text-green-500">${r.risk_status.split(':')[0]}</span>
+                    <div class="bg-zinc-900/50 p-5 rounded-2xl flex justify-between items-center border border-zinc-800">
+                        <div><p class="text-[10px] text-zinc-500 font-bold mb-1">${new Date(r.created_at).toLocaleDateString()}</p><p class="font-black text-2xl tracking-tighter">${r.angle_detected}°</p></div>
+                        <span class="text-[10px] font-black uppercase text-zinc-400 border border-zinc-700 px-3 py-1 rounded-full">${r.risk_status}</span>
                     </div>
                 `).join('');
             }
