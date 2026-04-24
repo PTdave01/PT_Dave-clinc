@@ -15,16 +15,17 @@
         .mono { font-family: 'Space Mono', monospace; }
         #neural-pulse { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; opacity: 0.1; pointer-events: none; }
         
-        /* HEADER SCALE FIX */
-        .brand-header { font-size: 1.75rem; line-height: 1.1; }
+        .brand-header { font-size: 1.6rem; line-height: 1.1; }
         @media (min-width: 768px) { .brand-header { font-size: 3.5rem; } }
 
-        .video-container { position: relative; width: 92%; max-width: 400px; aspect-ratio: 4/3; margin: 0 auto 15px; border-radius: 20px; overflow: hidden; background: #000; border: 2px solid rgba(37, 99, 235, 0.2); }
+        .video-container { position: relative; width: 92%; max-width: 380px; aspect-ratio: 4/3; margin: 0 auto 12px; border-radius: 20px; overflow: hidden; background: #000; border: 2px solid rgba(37, 99, 235, 0.2); }
         #output_canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 5; }
         #input_video { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); visibility: hidden; }
         
-        .premium-card { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(12px); border-radius: 28px; border: 1px solid rgba(255, 255, 255, 0.5); padding: 20px; }
-        .pt-dave-overlay { position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%); background: rgba(15, 23, 42, 0.9); color: #3b82f6; padding: 6px 14px; border-radius: 99px; font-size: 7px; font-weight: 800; letter-spacing: 0.2em; text-transform: uppercase; border: 1px solid rgba(59, 130, 246, 0.3); z-index: 10; }
+        .premium-card { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(12px); border-radius: 28px; border: 1px solid rgba(255, 255, 255, 0.5); padding: 18px; }
+        .pt-dave-overlay { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); background: rgba(15, 23, 42, 0.9); color: #3b82f6; padding: 5px 12px; border-radius: 99px; font-size: 7px; font-weight: 800; letter-spacing: 0.2em; text-transform: uppercase; border: 1px solid rgba(59, 130, 246, 0.3); z-index: 10; }
+        
+        select { font-size: 14px !important; }
     </style>
 </head>
 <body class="flex flex-col min-h-screen pt-4">
@@ -47,16 +48,30 @@
                 <button id="veto-btn" onclick="triggerVetoAction()" class="bg-slate-200 text-slate-500 text-[8px] px-4 py-2 rounded-full font-black uppercase tracking-widest border border-slate-300">Manual Veto</button>
             </div>
 
-            <div id="veto-alert" class="hidden p-3 mb-4 bg-red-50 border border-red-500 rounded-xl text-center">
-                <p class="text-red-700 text-[9px] font-black uppercase">🚨 LOCKDOWN: RED FLAG DETECTED 🚨</p>
-            </div>
-
             <div class="space-y-3">
                 <input type="email" id="email" placeholder="Identity (Email)" class="w-full bg-white border border-slate-100 p-3 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-50">
-                <select id="main-issue" class="w-full bg-white border border-slate-100 p-3 rounded-xl text-sm outline-none">
+                
+                <select id="main-issue" class="w-full bg-white border border-slate-100 p-3 rounded-xl text-sm outline-none font-medium">
                     <option value="">Select Deficiency...</option>
-                    <option value="Sciatica/Back Pain">Back Pain / Sciatica</option>
-                    <option value="Stroke Recovery">Stroke Recovery</option>
+                    <optgroup label="Neurological">
+                        <option value="Stroke Recovery">Stroke / Hemiplegia</option>
+                        <option value="Sciatica">Sciatica / Nerve Root Compression</option>
+                        <option value="Parkinsons">Parkinson’s Disease</option>
+                        <option value="Spinal Cord Injury">Spinal Cord Injury (Triage)</option>
+                        <option value="Cerebral Palsy">Cerebral Palsy (Pediatric Neural)</option>
+                    </optgroup>
+                    <optgroup label="Musculoskeletal">
+                        <option value="Low Back Pain">Chronic Low Back Pain</option>
+                        <option value="Cervical Spondylosis">Cervical Spondylosis (Neck Pain)</option>
+                        <option value="Osteoarthritis">Osteoarthritis (Knee/Hip)</option>
+                        <option value="Frozen Shoulder">Frozen Shoulder (Adhesive Capsulitis)</option>
+                        <option value="Sports Injury">Ligament Sprain / Muscle Strain</option>
+                    </optgroup>
+                    <optgroup label="Geriatric & Functional">
+                        <option value="Balance Disorders">Balance & Fall Prevention</option>
+                        <option value="General Frailty">Geriatric Functional Decline</option>
+                        <option value="Post-Op">Post-Surgical Rehabilitation</option>
+                    </optgroup>
                 </select>
             </div>
 
@@ -106,7 +121,6 @@
                 if (this.checked) {
                     redFlagActive = true;
                     isVetoActive = true;
-                    document.getElementById('veto-alert').classList.remove('hidden');
                     const btn = document.getElementById('veto-btn');
                     btn.classList.remove('bg-slate-200', 'text-slate-500');
                     btn.classList.add('bg-red-600', 'text-white', 'animate-pulse');
@@ -119,19 +133,22 @@
 
         function triggerVetoAction() {
             if (!redFlagActive) {
-                alert("Manual Veto is only for emergency red flags.");
+                alert("Manual Veto is reserved for clinical red flags.");
                 return;
             }
-            window.location.href = `https://wa.me/2349033325615?text=${encodeURIComponent("🚨 RED FLAG VETO 🚨\nClinical symptoms detected. Moses, I need an immediate review.")}`;
+            window.location.href = `https://wa.me/2349033325615?text=${encodeURIComponent("🚨 RED FLAG VETO 🚨\nSpecialist review needed for reported symptoms.")}`;
         }
 
         function pay(amount, tier) {
             const email = document.getElementById('email').value;
+            const issue = document.getElementById('main-issue').value;
             if (!email.includes('@')) { alert("Email Identity Required."); return; }
             PaystackPop.setup({
                 key: 'pk_live_ef67461cd9b75a09bf05c7c5c588dea850470cdf',
                 email: email, amount: amount * 100, currency: "NGN",
-                callback: function(res) { window.location.href = `https://wa.me/2349033325615?text=REHAB_AUTHORIZED_${tier}`; }
+                callback: function(res) { 
+                    window.location.href = `https://wa.me/2349033325615?text=REHAB_AUTHORIZED_${tier}_FOR_${issue}`; 
+                }
             }).openIframe();
         }
 
