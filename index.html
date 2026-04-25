@@ -46,7 +46,7 @@
 
     <div id="payment-modal" class="modal">
         <h2 class="text-xl font-black italic mb-2 tracking-tighter">SELECT CLINICAL PLAN</h2>
-        <p class="text-zinc-500 text-[10px] uppercase tracking-widest mb-8">Secure Payment to Physio Dave</p>
+        <p class="text-zinc-500 text-[10px] uppercase tracking-widest mb-8">Secure Payment to PT_Daveofficial</p>
         <div class="w-full space-y-4">
             <button onclick="pay(5000, 'basic')" class="w-full glass p-6 text-left border-l-4 border-zinc-700">
                 <div class="flex justify-between items-center"><span class="font-black text-lg italic">BASIC SCAN</span><span class="font-bold text-green-500">₦5,000</span></div>
@@ -103,7 +103,7 @@
         window.closePaymentModal = () => { document.getElementById('payment-modal').style.display = 'none'; };
 
         window.pay = (amount, plan) => {
-            const email = "payment@ptdaveofficial.ng";
+            const email = "Daniyanmoses.k@gmail.com";
             let handler = PaystackPop.setup({
                 key: PAYSTACK_KEY,
                 email: email,
