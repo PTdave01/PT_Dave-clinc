@@ -15,7 +15,7 @@
         .keypad-btn { background: #1a1a1a; width: 65px; height: 65px; border-radius: 50%; font-size: 1.5rem; font-weight: 700; display: flex; align-items: center; justify-content: center; transition: all 0.1s; border: 1px solid #333; }
         .dot { width: 12px; height: 12px; border-radius: 50%; border: 1px solid #444; }
         .dot.filled { background: #22c55e; border-color: #22c55e; }
-        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 100; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
+        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 100; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
     </style>
 </head>
 <body class="p-4 max-w-xl mx-auto">
@@ -31,93 +31,181 @@
             <canvas id="output_canvas"></canvas>
         </div>
 
-        <a id="whatsappBtn" href="https://wa.me/234XXXXXXXXXX" class="hidden w-full bg-blue-600 text-white py-4 rounded-2xl mb-4 font-black uppercase text-xs tracking-widest text-center block">Message Specialist (Paid)</a>
+        <a id="whatsappBtn" href="#" target="_blank" class="hidden w-full bg-blue-600 text-white py-4 rounded-2xl mb-4 font-black uppercase text-xs tracking-widest text-center block italic">Message Specialist (Premium)</a>
 
         <div class="grid grid-cols-2 gap-4 mb-6 text-center">
-            <div class="glass p-6"><p class="text-[10px] text-zinc-500 uppercase font-bold mb-1">Angle</p><h2 id="angleDisplay" class="text-5xl font-black italic">--°</h2></div>
-            <div id="riskCard" class="glass p-6 border-l-4 border-zinc-800"><p class="text-[10px] text-zinc-500 uppercase font-bold mb-1">Status</p><h2 id="riskDisplay" class="text-xs font-black uppercase tracking-tighter">Locked</h2></div>
+            <div class="glass p-6"><p class="text-[10px] text-zinc-500 uppercase font-bold mb-1 tracking-widest">Angle</p><h2 id="angleDisplay" class="text-5xl font-black italic">--°</h2></div>
+            <div id="riskCard" class="glass p-6 border-l-4 border-zinc-800"><p class="text-[10px] text-zinc-500 uppercase font-bold mb-1 tracking-widest">Status</p><h2 id="riskDisplay" class="text-xs font-black uppercase tracking-tighter">Locked</h2></div>
         </div>
         
         <div class="glass p-4 mb-4"><input id="patientID" type="text" placeholder="PATIENT NAME / ID" class="w-full bg-transparent text-center text-sm font-bold outline-none uppercase tracking-widest"></div>
+        
         <button id="mainActionBtn" onclick="openPaymentModal()" class="w-full bg-white text-black py-5 rounded-2xl mb-3 font-black uppercase text-xs tracking-widest">Unlock AI Scanner</button>
-        <button id="saveButton" class="w-full bg-green-600 text-white py-5 rounded-2xl font-black uppercase text-xs tracking-widest hidden">Sync to Frankfurt</button>
+        <button id="saveButton" class="hidden w-full bg-green-600 text-white py-5 rounded-2xl font-black uppercase text-xs shadow-lg shadow-green-900/20 tracking-widest">Sync to Frankfurt</button>
     </div>
 
     <div id="payment-modal" class="modal">
-        <h2 class="text-xl font-black italic mb-2">CHOOSE CLINICAL PLAN</h2>
-        <p class="text-zinc-500 text-[10px] uppercase tracking-widest mb-8">Secure Payment via Paystack</p>
-        
+        <h2 class="text-xl font-black italic mb-2 tracking-tighter">SELECT CLINICAL PLAN</h2>
+        <p class="text-zinc-500 text-[10px] uppercase tracking-widest mb-8">Secure Payment to Physio Dave</p>
         <div class="w-full space-y-4">
             <button onclick="pay(5000, 'basic')" class="w-full glass p-6 text-left border-l-4 border-zinc-700">
-                <div class="flex justify-between items-center">
-                    <span class="font-black text-lg italic">BASIC SCAN</span>
-                    <span class="font-bold text-green-500">₦5,000</span>
-                </div>
-                <p class="text-[10px] text-zinc-500 mt-1 uppercase">Full AI Range of Motion Analysis</p>
+                <div class="flex justify-between items-center"><span class="font-black text-lg italic">BASIC SCAN</span><span class="font-bold text-green-500">₦5,000</span></div>
+                <p class="text-[10px] text-zinc-500 mt-1 uppercase">Full AI Movement Analysis</p>
             </button>
-
             <button onclick="pay(10000, 'specialist')" class="w-full glass p-6 text-left border-l-4 border-blue-600">
-                <div class="flex justify-between items-center">
-                    <span class="font-black text-lg italic">SPECIALIST</span>
-                    <span class="font-bold text-blue-500">₦10,000</span>
-                </div>
-                <p class="text-[10px] text-zinc-500 mt-1 uppercase">AI Analysis + Direct WhatsApp Consultation</p>
+                <div class="flex justify-between items-center"><span class="font-black text-lg italic">SPECIALIST</span><span class="font-bold text-blue-500">₦10,000</span></div>
+                <p class="text-[10px] text-zinc-500 mt-1 uppercase">AI Analysis + WhatsApp Consultation</p>
             </button>
-            
-            <button onclick="closePaymentModal()" class="w-full text-zinc-600 text-[10px] font-bold uppercase mt-4">Cancel</button>
+            <button onclick="closePaymentModal()" class="w-full text-zinc-600 text-[10px] font-bold uppercase mt-6">Return to Portal</button>
+        </div>
+    </div>
+
+    <div id="keypad-overlay" class="fixed inset-0 bg-black/95 z-[200] hidden flex flex-col items-center justify-center p-6">
+        <p class="text-xs font-black tracking-widest text-zinc-500 mb-8 uppercase text-center">Enter Admin Passcode</p>
+        <div class="flex gap-4 mb-12"><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+        <div class="grid grid-cols-3 gap-6">
+            <button class="keypad-btn" onclick="pressKey('1')">1</button><button class="keypad-btn" onclick="pressKey('2')">2</button><button class="keypad-btn" onclick="pressKey('3')">3</button>
+            <button class="keypad-btn" onclick="pressKey('4')">4</button><button class="keypad-btn" onclick="pressKey('5')">5</button><button class="keypad-btn" onclick="pressKey('6')">6</button>
+            <button class="keypad-btn" onclick="pressKey('7')">7</button><button class="keypad-btn" onclick="pressKey('8')">8</button><button class="keypad-btn" onclick="pressKey('9')">9</button>
+            <button class="keypad-btn text-xs text-red-500 font-bold" onclick="hideKeypad()">ESC</button><button class="keypad-btn" onclick="pressKey('0')">0</button><button class="keypad-btn text-xs text-zinc-500 font-bold" onclick="clearKeypad()">CLR</button>
+        </div>
+    </div>
+
+    <div id="tab-records" class="hidden">
+        <div class="glass p-6 border-t-4 border-blue-600">
+            <div class="flex justify-between items-center mb-8">
+                <h3 class="text-lg font-black italic tracking-tighter uppercase">Clinical Vault</h3>
+                <button onclick="exitRecords()" class="text-[10px] bg-red-900/20 text-red-500 px-4 py-2 rounded-full font-bold uppercase">Lock Exit</button>
+            </div>
+            <div class="flex gap-2 mb-8">
+                <input id="searchID" type="text" placeholder="SEARCH PATIENT ID" class="flex-1 bg-zinc-900 border border-zinc-800 rounded-2xl p-4 text-sm font-bold outline-none uppercase tracking-widest">
+                <button onclick="fetchRecords()" class="bg-white text-black px-6 rounded-2xl font-black text-xs uppercase">Find</button>
+            </div>
+            <div id="resultsList" class="space-y-4"></div>
         </div>
     </div>
 
     <script type="module">
         import { PoseLandmarker, FilesetResolver, DrawingUtils } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0";
 
-        // --- CONFIG ---
+        // --- 1. SETTINGS (PASTE YOUR KEYS HERE) ---
         const SUPABASE_URL = "https://yrqlaljrceyupuptrniaj.supabase.co";
-        const SUPABASE_KEY = "sb_publishable_0fSp1dxo-j6tnSfpBeAZ5Q_SMQebX19";
-        const PAYSTACK_PUBLIC_KEY = "pk_live_ef67461cd9b75a09bf05c7c5c588dea850470cdf"; // ADD YOUR KEY HERE
-        const WHATSAPP_NUMBER = "2349061832609"; // ADD YOUR PHONE NUMBER HERE
-        
-        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        const SUPABASE_KEY = "sb_publishable_0fSp1dxo-j6tnSfpBeAZ5Q_SMQebX19"; 
+        const PAYSTACK_KEY = "pk_live_ef67461cd9b75a09bf05c7c5c588dea850470cdf";
+        const PHONE = "2349061832609"; // Your WhatsApp number
+        const ADMIN_PIN = "1808";
 
-        // --- PAYMENT LOGIC ---
+        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        let poseLandmarker; let webcamRunning = false; let lastAngle = 0; let lastStatus = "Awaiting";
+
+        // --- 2. PAYMENT & UNLOCK ---
         window.openPaymentModal = () => { document.getElementById('payment-modal').style.display = 'flex'; };
         window.closePaymentModal = () => { document.getElementById('payment-modal').style.display = 'none'; };
 
         window.pay = (amount, plan) => {
-            const email = "client@ptdave.ng"; // You can ask for email or use a placeholder
+            const email = "payment@ptdaveofficial.ng";
             let handler = PaystackPop.setup({
-                key: PAYSTACK_PUBLIC_KEY,
+                key: PAYSTACK_KEY,
                 email: email,
-                amount: amount * 100, // Paystack uses kobo
+                amount: amount * 100,
                 currency: "NGN",
-                callback: function(response) {
-                    alert("Payment Successful! Ref: " + response.reference);
-                    closePaymentModal();
-                    unlockScanner(plan);
-                },
-                onClose: function() { alert("Payment Cancelled"); }
+                callback: (res) => { unlockScanner(plan); },
+                onClose: () => { alert("Payment Required to Proceed"); }
             });
             handler.openIframe();
         };
 
         async function unlockScanner(plan) {
+            closePaymentModal();
             if (plan === 'specialist') {
-                const waBtn = document.getElementById('whatsappBtn');
-                waBtn.href = `https://wa.me/${WHATSAPP_NUMBER}?text=Hi%20Physio%20Dave,%20I%20just%20paid%20for%20a%20Specialist%20Scan.`;
-                waBtn.classList.remove('hidden');
+                const wa = document.getElementById('whatsappBtn');
+                wa.href = `https://wa.me/${PHONE}?text=Hi%20Physio%20Dave,%20I%20just%20completed%20a%20Specialist%20Scan.`;
+                wa.classList.remove('hidden');
             }
-            
             const stream = await navigator.mediaDevices.getUserMedia({ video: true });
             document.getElementById("webcam").srcObject = stream;
-            webcamRunning = true;
-            predict();
-            
+            webcamRunning = true; predict();
             document.getElementById("mainActionBtn").classList.add('hidden');
             document.getElementById("saveButton").classList.remove('hidden');
         }
 
-        // --- SCANNER & SYNC LOGIC (Keep from previous versions) ---
-        // ... [PASTE YOUR EXISTING PREDICT AND SYNC FUNCTIONS HERE] ...
+        // --- 3. AI SCANNER ---
+        const init = async () => {
+            const vision = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0/wasm");
+            poseLandmarker = await PoseLandmarker.createFromOptions(vision, {
+                baseOptions: { modelAssetPath: `https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task`, delegate: "GPU" },
+                runningMode: "VIDEO"
+            });
+        };
+        init();
+
+        const video = document.getElementById("webcam");
+        const canvas = document.getElementById("output_canvas");
+        const ctx = canvas.getContext("2d");
+
+        async function predict() {
+            if (!webcamRunning) return;
+            canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+            const results = poseLandmarker.detectForVideo(video, performance.now());
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            if (results.landmarks && results.landmarks[0]) {
+                const pts = results.landmarks[0];
+                const hip = pts[24], knee = pts[26], ankle = pts[28];
+                const rad = Math.atan2(ankle.y - knee.y, ankle.x - knee.x) - Math.atan2(hip.y - knee.y, hip.x - knee.x);
+                let ang = Math.abs(rad * 180.0 / Math.PI);
+                ang = ang > 180 ? 360 - ang : ang;
+                lastAngle = ang.toFixed(1);
+                document.getElementById("angleDisplay").innerText = `${lastAngle}°`;
+                const disp = document.getElementById("riskDisplay");
+                if (lastAngle < 90) { lastStatus = "RED FLAG"; disp.innerText = "DANGER"; }
+                else if (lastAngle < 120) { lastStatus = "YELLOW"; disp.innerText = "CAUTION"; }
+                else { lastStatus = "GREEN"; disp.innerText = "OPTIMAL"; }
+                new DrawingUtils(ctx).drawConnectors(pts, PoseLandmarker.POSE_CONNECTIONS, { color: '#ffffff22', lineWidth: 1 });
+                new DrawingUtils(ctx).drawLandmarks([hip, knee, ankle], { color: '#22c55e', lineWidth: 4 });
+            }
+            requestAnimationFrame(predict);
+        }
+
+        // --- 4. FRANKFURT SYNC ---
+        document.getElementById("saveButton").onclick = async () => {
+            const id = document.getElementById("patientID").value || "GUEST";
+            const { error } = await _supabase.from('patient_scans').insert([{ 
+                patient_name: id, joint_type: 'Knee', angle_detected: parseFloat(lastAngle), risk_status: lastStatus 
+            }]);
+            alert(error ? "Sync Error: " + error.message : "✅ DATA SECURED IN FRANKFURT");
+        };
+
+        // --- 5. ADMIN & RECORDS ---
+        let pinCode = "";
+        window.showKeypad = () => { document.getElementById('keypad-overlay').classList.remove('hidden'); };
+        window.hideKeypad = () => { pinCode = ""; updateDots(); document.getElementById('keypad-overlay').classList.add('hidden'); };
+        window.clearKeypad = () => { pinCode = ""; updateDots(); };
+        window.pressKey = (n) => {
+            if (pinCode.length < 4) {
+                pinCode += n; updateDots();
+                if (pinCode === ADMIN_PIN) {
+                    hideKeypad();
+                    document.getElementById('tab-scanner').classList.add('hidden');
+                    document.getElementById('tab-records').classList.remove('hidden');
+                } else if (pinCode.length === 4) { alert("DENIED"); clearKeypad(); }
+            }
+        };
+        function updateDots() { const dots = document.querySelectorAll('.dot'); dots.forEach((d, i) => d.classList.toggle('filled', i < pinCode.length)); }
+        window.exitRecords = () => { document.getElementById('tab-records').classList.add('hidden'); document.getElementById('tab-scanner').classList.remove('hidden'); };
+
+        window.fetchRecords = async () => {
+            const id = document.getElementById("searchID").value;
+            const list = document.getElementById("resultsList");
+            list.innerHTML = "<p class='text-center text-[10px] animate-pulse uppercase'>Querying Frankfurt...</p>";
+            const { data, error } = await _supabase.from('patient_scans').select('*').eq('patient_name', id).order('created_at', { ascending: false });
+            if (error) { list.innerHTML = `<p class='text-red-500 text-xs'>${error.message}</p>`; return; }
+            list.innerHTML = data.length ? data.map(r => `
+                <div class="bg-zinc-900/50 p-5 rounded-2xl flex justify-between items-center border border-zinc-800">
+                    <div><p class="text-[10px] text-zinc-500 font-bold">${new Date(r.created_at).toLocaleDateString()}</p><p class="font-black text-2xl tracking-tighter">${r.angle_detected}°</p></div>
+                    <span class="text-[10px] font-black uppercase text-zinc-400 border border-zinc-700 px-3 py-1 rounded-full">${r.risk_status}</span>
+                </div>
+            `).join('') : "<p class='text-center text-zinc-600 py-10 text-[10px] uppercase font-bold'>No records found.</p>";
+        };
     </script>
 </body>
 </html>
