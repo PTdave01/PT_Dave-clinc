@@ -3,12 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>PT_Dave Physio AI | Visual Diagnostic Scanner</title>
+    <title>PT_Dave Physio AI | Live Posture Analysis</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <script src="https://js.paystack.co/v1/inline.js"></script>
+    <!-- TensorFlow.js and MoveNet -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core@4.10.0/dist/tf-core.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-converter@4.10.0/dist/tf-converter.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl@4.10.0/dist/tf-backend-webgl.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection@2.1.3/dist/pose-detection.min.js"></script>
     <style>
-        /* Diagnostic Modal */
         .diagnostic-modal {
             position: fixed;
             top: 0;
@@ -33,23 +37,9 @@
             width: 80%;
             max-width: 400px;
             margin: 20px auto;
-            filter: drop-shadow(0 0 10px rgba(0,255,255,0.3));
         }
-        .scan-region {
-            transition: all 0.2s;
-        }
-        .scan-line-svg {
-            stroke: cyan;
-            stroke-width: 3;
-            stroke-dasharray: 10 10;
-            animation: scanMoveSvg 1.2s linear infinite;
-        }
-        @keyframes scanMoveSvg {
-            0% { stroke-dashoffset: 0; }
-            100% { stroke-dashoffset: 20; }
-        }
-        .region-glow {
-            filter: drop-shadow(0 0 8px cyan);
+        .scan-progress-bar {
+            transition: width 10s linear;
         }
         .toast { transition: opacity 0.3s; }
         .vault-modal {
@@ -65,11 +55,32 @@
             justify-content: center;
             visibility: hidden;
         }
-        .vault-modal.active {
-            visibility: visible;
+        .vault-modal.active { visibility: visible; }
+        #videoElement {
+            transform: scaleX(-1);
+            width: 100%;
+            border-radius: 1rem;
+            background: #000;
         }
-        .region-btn, .spec-region-btn {
-            transition: all 0.1s ease;
+        .pose-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+        .video-container {
+            position: relative;
+            width: 100%;
+            max-width: 480px;
+            margin: 0 auto;
+        }
+        .feedback-card {
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(8px);
+            border-radius: 1rem;
+            padding: 0.75rem;
         }
     </style>
 </head>
@@ -83,7 +94,7 @@
                 <h1 class="text-2xl font-bold text-indigo-800">PT_Dave Physio AI</h1>
             </div>
             <div class="flex gap-2 items-center">
-                <span class="bg-white/70 rounded-full px-3 py-1 text-sm shadow-sm"><i class="fas fa-laptop-medical"></i> Free</span>
+                <span class="bg-white/70 rounded-full px-3 py-1 text-sm shadow-sm"><i class="fas fa-camera"></i> Live Posture</span>
                 <span class="bg-amber-100 rounded-full px-3 py-1 text-sm shadow-sm"><i class="fas fa-crown"></i> Specialist ₦10k</span>
                 <button id="vaultLockBtn" class="bg-gray-700 hover:bg-gray-800 text-white rounded-full px-3 py-1 text-sm shadow-sm"><i class="fas fa-lock"></i> Vault</button>
             </div>
@@ -92,150 +103,179 @@
         <!-- Toast -->
         <div id="toast" class="fixed top-4 right-4 z-50 bg-gray-800 text-white px-4 py-2 rounded-lg shadow-lg text-sm hidden"></div>
 
-        <!-- ========= DIAGNOSTIC MODAL (Visual Body Scanner) ========= -->
-        <div id="diagnosticModal" class="diagnostic-modal">
-            <h2 class="text-white text-xl font-mono mb-2"><i class="fas fa-microchip"></i> AI Diagnostic Scan</h2>
-            <div class="body-svg" id="bodySvgContainer">
-                <!-- SVG will be injected by JS based on selected region -->
-            </div>
-            <p class="text-cyan-300 text-sm mt-4" id="scanStatusMsg">Analyzing symptoms...</p>
-            <div class="mt-6 w-48 h-1 bg-gray-700 rounded-full overflow-hidden">
-                <div class="scan-progress-bar" style="width: 0%; height: 100%; background: cyan; transition: width 1.8s linear;"></div>
-            </div>
+        <!-- Tabs: Symptom Scanner / Live Posture -->
+        <div class="flex gap-2 mb-4 border-b">
+            <button id="symptomTabBtn" class="py-2 px-4 font-semibold text-indigo-700 border-b-2 border-indigo-700">📋 Symptom Scanner</button>
+            <button id="postureTabBtn" class="py-2 px-4 font-semibold text-gray-500">📸 Live Posture Analysis</button>
         </div>
 
-        <!-- ========= BASIC FREE SCANNER ========= -->
-        <div class="bg-white rounded-2xl shadow-md border border-indigo-100 mb-8 overflow-hidden">
-            <div class="bg-indigo-600 px-5 py-2 text-white flex justify-between items-center">
-                <span class="font-semibold"><i class="fas fa-heartbeat mr-2"></i>Free Scan - Full Body</span>
-                <i class="fas fa-robot text-indigo-200"></i>
-            </div>
-            <div class="p-5">
-                <div class="grid md:grid-cols-2 gap-5">
-                    <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-1">Patient name</label>
-                        <input type="text" id="basicPatientName" placeholder="e.g., John" class="w-full border rounded-xl px-3 py-2 mb-3 text-sm">
+        <!-- ========= SYMPTOM SCANNER SECTION ========= -->
+        <div id="symptomSection">
+            <div class="bg-white rounded-2xl shadow-md border border-indigo-100 mb-8 overflow-hidden">
+                <div class="bg-indigo-600 px-5 py-2 text-white flex justify-between items-center">
+                    <span class="font-semibold"><i class="fas fa-heartbeat mr-2"></i>Free Scan - Full Body</span>
+                    <i class="fas fa-robot text-indigo-200"></i>
+                </div>
+                <div class="p-5">
+                    <div class="grid md:grid-cols-2 gap-5">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-1">Patient name</label>
+                            <input type="text" id="basicPatientName" placeholder="e.g., John" class="w-full border rounded-xl px-3 py-2 mb-3 text-sm">
 
-                        <label class="block text-sm font-semibold text-gray-700 mb-1">Body region</label>
-                        <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-3">
-                            <button data-region="neck" class="basic-region-btn py-1.5 rounded-lg border text-sm">Neck</button>
-                            <button data-region="shoulder" class="basic-region-btn py-1.5 rounded-lg border text-sm">Shoulder</button>
-                            <button data-region="upperback" class="basic-region-btn py-1.5 rounded-lg border text-sm">Upper back</button>
-                            <button data-region="lowerback" class="basic-region-btn py-1.5 rounded-lg border text-sm">Lower back</button>
-                            <button data-region="hip" class="basic-region-btn py-1.5 rounded-lg border text-sm">Hip</button>
-                            <button data-region="knee" class="basic-region-btn py-1.5 rounded-lg border text-sm">Knee</button>
-                            <button data-region="ankle" class="basic-region-btn py-1.5 rounded-lg border text-sm">Ankle</button>
-                            <button data-region="foot" class="basic-region-btn py-1.5 rounded-lg border text-sm">Foot</button>
-                            <button data-region="elbow" class="basic-region-btn py-1.5 rounded-lg border text-sm">Elbow</button>
-                            <button data-region="wrist" class="basic-region-btn py-1.5 rounded-lg border text-sm">Wrist/Hand</button>
+                            <label class="block text-sm font-semibold text-gray-700 mb-1">Body region</label>
+                            <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-3">
+                                <button data-region="neck" class="basic-region-btn py-1.5 rounded-lg border text-sm">Neck</button>
+                                <button data-region="shoulder" class="basic-region-btn py-1.5 rounded-lg border text-sm">Shoulder</button>
+                                <button data-region="upperback" class="basic-region-btn py-1.5 rounded-lg border text-sm">Upper back</button>
+                                <button data-region="lowerback" class="basic-region-btn py-1.5 rounded-lg border text-sm">Lower back</button>
+                                <button data-region="hip" class="basic-region-btn py-1.5 rounded-lg border text-sm">Hip</button>
+                                <button data-region="knee" class="basic-region-btn py-1.5 rounded-lg border text-sm">Knee</button>
+                                <button data-region="ankle" class="basic-region-btn py-1.5 rounded-lg border text-sm">Ankle</button>
+                                <button data-region="foot" class="basic-region-btn py-1.5 rounded-lg border text-sm">Foot</button>
+                                <button data-region="elbow" class="basic-region-btn py-1.5 rounded-lg border text-sm">Elbow</button>
+                                <button data-region="wrist" class="basic-region-btn py-1.5 rounded-lg border text-sm">Wrist/Hand</button>
+                            </div>
+
+                            <label class="block text-sm font-semibold text-gray-700 mb-1">Symptoms</label>
+                            <div id="basicSymptomsContainer" class="flex flex-wrap gap-1.5 min-h-[80px] bg-gray-50 p-2 rounded-lg border text-sm mb-3">
+                                <span class="text-gray-400 text-xs">Select region first</span>
+                            </div>
+
+                            <label class="block text-sm font-semibold text-gray-700 mb-1">Outcome</label>
+                            <div class="flex gap-4 text-sm">
+                                <div>Pain: <input type="range" id="basicPain" min="0" max="10" value="3" class="w-24"> <span id="basicPainVal">3</span></div>
+                                <div>Function: <input type="range" id="basicFunc" min="0" max="10" value="6" class="w-24"> <span id="basicFuncVal">6</span></div>
+                            </div>
+
+                            <button id="basicScanBtn" class="mt-4 w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 rounded-full shadow flex items-center justify-center gap-2"><i class="fas fa-stethoscope"></i> Run Free Scan</button>
                         </div>
-
-                        <label class="block text-sm font-semibold text-gray-700 mb-1">Symptoms</label>
-                        <div id="basicSymptomsContainer" class="flex flex-wrap gap-1.5 min-h-[80px] bg-gray-50 p-2 rounded-lg border text-sm mb-3">
-                            <span class="text-gray-400 text-xs">Select region first</span>
+                        <div class="bg-gray-50 rounded-xl p-3 border">
+                            <h3 class="font-bold text-gray-800 text-sm flex items-center gap-1"><i class="fas fa-notes-medical"></i> Report</h3>
+                            <div id="basicResult" class="text-xs text-gray-700 mt-1 whitespace-pre-line max-h-64 overflow-auto">⚡ Ready</div>
+                            <div class="mt-2 flex gap-2">
+                                <button id="saveBasicReportBtn" class="text-xs bg-white border rounded-full px-2 py-1"><i class="fas fa-save"></i> Save</button>
+                                <button id="copyBasicBtn" class="text-xs bg-white border rounded-full px-2 py-1"><i class="fas fa-copy"></i> Copy</button>
+                            </div>
                         </div>
-
-                        <label class="block text-sm font-semibold text-gray-700 mb-1">Outcome</label>
-                        <div class="flex gap-4 text-sm">
-                            <div>Pain: <input type="range" id="basicPain" min="0" max="10" value="3" class="w-24"> <span id="basicPainVal">3</span></div>
-                            <div>Function: <input type="range" id="basicFunc" min="0" max="10" value="6" class="w-24"> <span id="basicFuncVal">6</span></div>
-                        </div>
-
-                        <button id="basicScanBtn" class="mt-4 w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 rounded-full shadow flex items-center justify-center gap-2"><i class="fas fa-stethoscope"></i> Run Free Scan</button>
                     </div>
-
-                    <div class="bg-gray-50 rounded-xl p-3 border">
-                        <h3 class="font-bold text-gray-800 text-sm flex items-center gap-1"><i class="fas fa-notes-medical"></i> Report</h3>
-                        <div id="basicResult" class="text-xs text-gray-700 mt-1 whitespace-pre-line max-h-64 overflow-auto">⚡ Ready</div>
-                        <div class="mt-2 flex gap-2">
-                            <button id="saveBasicReportBtn" class="text-xs bg-white border rounded-full px-2 py-1"><i class="fas fa-save"></i> Save</button>
-                            <button id="copyBasicBtn" class="text-xs bg-white border rounded-full px-2 py-1"><i class="fas fa-copy"></i> Copy</button>
-                        </div>
+                    <div id="basicExerciseBox" class="mt-3 p-2 bg-green-50 rounded-lg text-xs border hidden">
+                        <i class="fas fa-dumbbell"></i> <strong>Exercise:</strong> <span id="basicExerciseText"></span>
                     </div>
                 </div>
-                <div id="basicExerciseBox" class="mt-3 p-2 bg-green-50 rounded-lg text-xs border hidden">
-                    <i class="fas fa-dumbbell"></i> <strong>Exercise:</strong> <span id="basicExerciseText"></span>
+            </div>
+
+            <!-- Specialist scanner (same as before) -->
+            <div class="bg-white rounded-2xl shadow-md border border-amber-200 overflow-hidden">
+                <div class="bg-amber-600 px-5 py-2 text-white flex justify-between items-center">
+                    <span class="font-semibold"><i class="fas fa-crown mr-2"></i>Specialist · ₦10,000</span>
+                    <i class="fab fa-whatsapp"></i>
                 </div>
-            </div>
-        </div>
-
-        <!-- ========= SPECIALIST SCANNER ========= -->
-        <div class="bg-white rounded-2xl shadow-md border border-amber-200 overflow-hidden">
-            <div class="bg-amber-600 px-5 py-2 text-white flex justify-between items-center">
-                <span class="font-semibold"><i class="fas fa-crown mr-2"></i>Specialist · ₦10,000</span>
-                <i class="fab fa-whatsapp"></i>
-            </div>
-            <div class="p-5">
-                <div class="grid md:grid-cols-2 gap-5">
-                    <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-1">Full name *</label>
-                        <input type="text" id="specialistPatientName" placeholder="Required" class="w-full border rounded-xl px-3 py-2 mb-3 text-sm">
-
-                        <label class="block text-sm font-semibold text-gray-700 mb-1">WhatsApp (for copy)</label>
-                        <input type="tel" id="specialistPatientPhone" placeholder="2348123456789" class="w-full border rounded-xl px-3 py-2 mb-3 text-sm">
-
-                        <label class="block text-sm font-semibold text-gray-700 mb-1">Body region</label>
-                        <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-3">
-                            <button data-spec-region="neck" class="spec-region-btn py-1.5 rounded-lg border text-sm">Neck</button>
-                            <button data-spec-region="shoulder" class="spec-region-btn py-1.5 rounded-lg border text-sm">Shoulder</button>
-                            <button data-spec-region="upperback" class="spec-region-btn py-1.5 rounded-lg border text-sm">Upper back</button>
-                            <button data-spec-region="lowerback" class="spec-region-btn py-1.5 rounded-lg border text-sm">Lower back</button>
-                            <button data-spec-region="hip" class="spec-region-btn py-1.5 rounded-lg border text-sm">Hip</button>
-                            <button data-spec-region="knee" class="spec-region-btn py-1.5 rounded-lg border text-sm">Knee</button>
-                            <button data-spec-region="ankle" class="spec-region-btn py-1.5 rounded-lg border text-sm">Ankle</button>
-                            <button data-spec-region="foot" class="spec-region-btn py-1.5 rounded-lg border text-sm">Foot</button>
-                            <button data-spec-region="elbow" class="spec-region-btn py-1.5 rounded-lg border text-sm">Elbow</button>
-                            <button data-spec-region="wrist" class="spec-region-btn py-1.5 rounded-lg border text-sm">Wrist/Hand</button>
+                <div class="p-5">
+                    <div class="grid md:grid-cols-2 gap-5">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-1">Full name *</label>
+                            <input type="text" id="specialistPatientName" placeholder="Required" class="w-full border rounded-xl px-3 py-2 mb-3 text-sm">
+                            <label class="block text-sm font-semibold text-gray-700 mb-1">WhatsApp (for copy)</label>
+                            <input type="tel" id="specialistPatientPhone" placeholder="2348123456789" class="w-full border rounded-xl px-3 py-2 mb-3 text-sm">
+                            <label class="block text-sm font-semibold text-gray-700 mb-1">Body region</label>
+                            <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-3">
+                                <button data-spec-region="neck" class="spec-region-btn py-1.5 rounded-lg border text-sm">Neck</button>
+                                <button data-spec-region="shoulder" class="spec-region-btn py-1.5 rounded-lg border text-sm">Shoulder</button>
+                                <button data-spec-region="upperback" class="spec-region-btn py-1.5 rounded-lg border text-sm">Upper back</button>
+                                <button data-spec-region="lowerback" class="spec-region-btn py-1.5 rounded-lg border text-sm">Lower back</button>
+                                <button data-spec-region="hip" class="spec-region-btn py-1.5 rounded-lg border text-sm">Hip</button>
+                                <button data-spec-region="knee" class="spec-region-btn py-1.5 rounded-lg border text-sm">Knee</button>
+                                <button data-spec-region="ankle" class="spec-region-btn py-1.5 rounded-lg border text-sm">Ankle</button>
+                                <button data-spec-region="foot" class="spec-region-btn py-1.5 rounded-lg border text-sm">Foot</button>
+                                <button data-spec-region="elbow" class="spec-region-btn py-1.5 rounded-lg border text-sm">Elbow</button>
+                                <button data-spec-region="wrist" class="spec-region-btn py-1.5 rounded-lg border text-sm">Wrist/Hand</button>
+                            </div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-1">Symptoms</label>
+                            <div id="specialistSymptomsContainer" class="flex flex-wrap gap-1.5 min-h-[80px] bg-gray-50 p-2 rounded-lg border text-sm mb-3"></div>
+                            <div class="flex gap-4 text-sm">
+                                <div>Pain: <input type="range" id="specPain" min="0" max="10" value="4" class="w-24"> <span id="specPainVal">4</span></div>
+                                <div>Function: <input type="range" id="specFunc" min="0" max="10" value="5" class="w-24"> <span id="specFuncVal">5</span></div>
+                            </div>
+                            <button id="paystackPayBtn" class="mt-4 w-full bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 rounded-full shadow flex items-center justify-center gap-2"><i class="fab fa-paystack"></i> Pay ₦10k & Scan</button>
                         </div>
-
-                        <label class="block text-sm font-semibold text-gray-700 mb-1">Symptoms</label>
-                        <div id="specialistSymptomsContainer" class="flex flex-wrap gap-1.5 min-h-[80px] bg-gray-50 p-2 rounded-lg border text-sm mb-3">
-                            <span class="text-gray-400 text-xs">Select region first</span>
-                        </div>
-
-                        <div class="flex gap-4 text-sm">
-                            <div>Pain: <input type="range" id="specPain" min="0" max="10" value="4" class="w-24"> <span id="specPainVal">4</span></div>
-                            <div>Function: <input type="range" id="specFunc" min="0" max="10" value="5" class="w-24"> <span id="specFuncVal">5</span></div>
-                        </div>
-
-                        <button id="paystackPayBtn" class="mt-4 w-full bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 rounded-full shadow flex items-center justify-center gap-2"><i class="fab fa-paystack"></i> Pay ₦10k & Scan</button>
-                    </div>
-
-                    <div class="bg-gray-50 rounded-xl p-3 border">
-                        <h3 class="font-bold text-gray-800 text-sm"><i class="fas fa-file-prescription"></i> Specialist Report</h3>
-                        <div id="specialistResult" class="text-xs text-gray-700 mt-1 whitespace-pre-line max-h-64 overflow-auto">🔒 Unlock with payment</div>
-                        <div class="mt-2 flex gap-2">
-                            <button id="copySpecialistBtn" class="text-xs bg-white border rounded-full px-2 py-1"><i class="fas fa-copy"></i> Copy</button>
-                            <a id="whatsappContactBtn" href="#" target="_blank" class="text-xs bg-green-100 border rounded-full px-2 py-1"><i class="fab fa-whatsapp"></i> Contact PT</a>
+                        <div class="bg-gray-50 rounded-xl p-3 border">
+                            <h3 class="font-bold text-gray-800 text-sm"><i class="fas fa-file-prescription"></i> Specialist Report</h3>
+                            <div id="specialistResult" class="text-xs text-gray-700 mt-1 whitespace-pre-line max-h-64 overflow-auto">🔒 Unlock with payment</div>
+                            <div class="mt-2 flex gap-2">
+                                <button id="copySpecialistBtn" class="text-xs bg-white border rounded-full px-2 py-1"><i class="fas fa-copy"></i> Copy</button>
+                                <a id="whatsappContactBtn" href="#" target="_blank" class="text-xs bg-green-100 border rounded-full px-2 py-1"><i class="fab fa-whatsapp"></i> Contact PT</a>
+                            </div>
                         </div>
                     </div>
-                </div>
-                <div id="specialistExerciseBox" class="mt-3 p-2 bg-green-50 rounded-lg text-xs border hidden">
-                    <i class="fas fa-dumbbell"></i> <strong>Exercise:</strong> <span id="specialistExerciseText"></span>
+                    <div id="specialistExerciseBox" class="mt-3 p-2 bg-green-50 rounded-lg text-xs border hidden">
+                        <i class="fas fa-dumbbell"></i> <strong>Exercise:</strong> <span id="specialistExerciseText"></span>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <div class="text-center text-xs text-gray-400 mt-6 pt-2 border-t">AI suggestions are clinical support only. All regions covered.</div>
+        <!-- ========= LIVE POSTURE ANALYSIS SECTION ========= -->
+        <div id="postureSection" class="hidden">
+            <div class="bg-white rounded-2xl shadow-md border border-emerald-200 overflow-hidden">
+                <div class="bg-emerald-600 px-5 py-2 text-white flex justify-between items-center">
+                    <span class="font-semibold"><i class="fas fa-camera mr-2"></i> Live Posture Analysis</span>
+                    <i class="fas fa-robot text-emerald-200"></i>
+                </div>
+                <div class="p-5">
+                    <div class="grid md:grid-cols-2 gap-5">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-1">Patient name</label>
+                            <input type="text" id="posturePatientName" placeholder="e.g., Sarah" class="w-full border rounded-xl px-3 py-2 mb-3 text-sm">
+                            <div class="video-container">
+                                <video id="postureVideo" autoplay playsinline style="width:100%; border-radius:1rem; background:#000;"></video>
+                                <canvas id="postureCanvas" class="pose-canvas"></canvas>
+                            </div>
+                            <div class="mt-3 flex gap-2">
+                                <button id="capturePostureBtn" class="bg-emerald-600 hover:bg-emerald-700 text-white py-1.5 px-3 rounded-full text-sm"><i class="fas fa-camera"></i> Capture & Analyze</button>
+                                <button id="startCameraBtn" class="bg-gray-600 hover:bg-gray-700 text-white py-1.5 px-3 rounded-full text-sm"><i class="fas fa-play"></i> Start Camera</button>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="bg-gray-50 rounded-xl p-3 border mb-3">
+                                <h3 class="font-bold text-gray-800 text-sm"><i class="fas fa-chart-line"></i> Posture Feedback</h3>
+                                <div id="postureFeedback" class="text-sm text-gray-700 mt-2 whitespace-pre-line">Camera off. Click "Start Camera".</div>
+                            </div>
+                            <div class="bg-gray-50 rounded-xl p-3 border">
+                                <h3 class="font-bold text-gray-800 text-sm"><i class="fas fa-notes-medical"></i> Analysis Report</h3>
+                                <div id="postureReport" class="text-xs text-gray-700 mt-1 whitespace-pre-line">Will appear after capture.</div>
+                                <div class="mt-2 flex gap-2">
+                                    <button id="savePostureReportBtn" class="text-xs bg-white border rounded-full px-2 py-1"><i class="fas fa-save"></i> Save Report</button>
+                                    <button id="sendPostureWhatsAppBtn" class="text-xs bg-green-100 border rounded-full px-2 py-1"><i class="fab fa-whatsapp"></i> Send to PT_Dave</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="text-center text-xs text-gray-400 mt-6 pt-2 border-t">AI suggestions are clinical support only. Posture analysis uses device camera – no images stored.</div>
     </div>
 
     <!-- VAULT MODAL -->
     <div id="vaultModal" class="vault-modal">
         <div class="bg-white rounded-2xl shadow-2xl w-11/12 max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
             <div class="bg-indigo-800 text-white px-5 py-3 flex justify-between items-center">
-                <span><i class="fas fa-archive mr-2"></i> Therapist Vault - All Reports</span>
-                <button id="closeVaultBtn" class="text-white hover:text-gray-200"><i class="fas fa-times"></i></button>
+                <span><i class="fas fa-archive mr-2"></i> Therapist Vault</span>
+                <button id="closeVaultBtn" class="text-white"><i class="fas fa-times"></i></button>
             </div>
             <div id="vaultContent" class="p-4 overflow-auto flex-1"></div>
             <div class="bg-gray-100 px-5 py-3 flex justify-end gap-2">
-                <button id="exportVaultBtn" class="bg-green-600 text-white px-3 py-1 rounded-full text-sm hidden"><i class="fas fa-download"></i> Export All</button>
-                <button id="clearVaultBtn" class="bg-red-600 text-white px-3 py-1 rounded-full text-sm hidden"><i class="fas fa-trash-alt"></i> Clear All</button>
+                <button id="exportVaultBtn" class="bg-green-600 text-white px-3 py-1 rounded-full text-sm hidden">Export All</button>
+                <button id="clearVaultBtn" class="bg-red-600 text-white px-3 py-1 rounded-full text-sm hidden">Clear All</button>
             </div>
         </div>
     </div>
 
     <script>
-        // ========= SYMPTOM MAP & DIAGNOSTIC LOGIC (same as before, full body) =========
+        // ============================================
+        // 1. SYMPTOM SCANNER LOGIC (same as before, condensed)
+        // ============================================
         const symptomMap = {
             neck: ["Stiffness & reduced rotation", "Radiating pain to shoulder/arm", "Headaches at base of skull", "Sharp pain with extension", "Tingling in fingers"],
             shoulder: ["Pain lifting arm sideways", "Night pain on side", "Clicking / popping", "Loss of external rotation", "Weakness overhead"],
@@ -248,453 +288,343 @@
             elbow: ["Pain on outside of elbow (tennis elbow)", "Pain on inside (golfer's elbow)", "Locking or clicking", "Pain with gripping", "Stiffness after rest"],
             wrist: ["Pain with gripping or twisting", "Numbness in thumb/index fingers", "Snapping sensation", "Weakness lifting objects", "Swelling over back of wrist"]
         };
-
-        function aiDiagnose(region, symptoms, painScore, functionScore, isSpecialist = false) {
-            if (!region || symptoms.length === 0) return "⚠️ Select region and at least one symptom.";
-            let conditions = [], advice = "";
-            switch(region) {
-                case "neck":
-                    if (symptoms.some(s => s.includes("Radiating") || s.includes("Tingling"))) conditions.push("Cervical radiculopathy");
-                    if (symptoms.some(s => s.includes("Headaches"))) conditions.push("Cervicogenic headache");
-                    if (conditions.length === 0) conditions.push("Mechanical neck pain");
-                    advice = "Upper cervical mobs, posture correction, neural dynamics.";
-                    break;
-                case "shoulder":
-                    if (symptoms.some(s => s.includes("Pain lifting"))) conditions.push("Rotator cuff tendinopathy");
-                    if (symptoms.some(s => s.includes("Night pain"))) conditions.push("Subacromial pain syndrome");
-                    if (conditions.length === 0) conditions.push("Shoulder impingement");
-                    advice = "Isometric loading, glenohumeral mobs, rotator cuff strengthening.";
-                    break;
-                case "upperback":
-                    if (symptoms.some(s => s.includes("Radiating"))) conditions.push("Thoracic radiculopathy");
-                    if (symptoms.some(s => s.includes("Stiffness"))) conditions.push("Thoracic facet joint dysfunction");
-                    if (conditions.length === 0) conditions.push("Postural thoracic pain");
-                    advice = "Thoracic extension mobs, scapular retractions, breathing exercises.";
-                    break;
-                case "lowerback":
-                    if (symptoms.some(s => s.includes("radiating"))) conditions.push("Lumbar radiculopathy");
-                    if (symptoms.some(s => s.includes("Morning stiffness"))) conditions.push("Inflammatory pattern");
-                    if (conditions.length === 0) conditions.push("Mechanical LBP");
-                    advice = "Extension-based preferences, core stability, avoid prolonged flexion.";
-                    break;
-                case "hip":
-                    if (symptoms.some(s => s.includes("groin"))) conditions.push("Hip OA / femoroacetabular impingement");
-                    if (symptoms.some(s => s.includes("clicking"))) conditions.push("Snapping hip syndrome");
-                    if (conditions.length === 0) conditions.push("Gluteal tendinopathy");
-                    advice = "Hip flexor stretch, glute strengthening, load management.";
-                    break;
-                case "knee":
-                    if (symptoms.some(s => s.includes("stairs"))) conditions.push("Patellofemoral pain");
-                    if (symptoms.some(s => s.includes("Locking"))) conditions.push("Possible meniscal tear");
-                    if (conditions.length === 0) conditions.push("Patellar tendinopathy / early OA");
-                    advice = "VMO strengthening, glute med work, step-down retraining.";
-                    break;
-                case "ankle":
-                    if (symptoms.some(s => s.includes("instability"))) conditions.push("Chronic ankle instability");
-                    if (symptoms.some(s => s.includes("swelling"))) conditions.push("Lateral ankle sprain");
-                    if (conditions.length === 0) conditions.push("Ankle impingement or tendinopathy");
-                    advice = "Proprioception training, calf raises, peroneal strengthening.";
-                    break;
-                case "foot":
-                    if (symptoms.some(s => s.includes("Heel pain"))) conditions.push("Plantar fasciopathy");
-                    if (symptoms.some(s => s.includes("Arch pain"))) conditions.push("Posterior tibial tendon dysfunction");
-                    if (conditions.length === 0) conditions.push("Metatarsalgia or forefoot pain");
-                    advice = "Calf stretching, arch supports, toe yoga, gradual loading.";
-                    break;
-                case "elbow":
-                    if (symptoms.some(s => s.includes("outside"))) conditions.push("Lateral epicondylalgia (tennis elbow)");
-                    if (symptoms.some(s => s.includes("inside"))) conditions.push("Medial epicondylalgia (golfer's elbow)");
-                    if (conditions.length === 0) conditions.push("Olecranon bursitis or posterior impingement");
-                    advice = "Eccentric wrist exercises, counterforce bracing, grip strength training.";
-                    break;
-                case "wrist":
-                    if (symptoms.some(s => s.includes("Numbness"))) conditions.push("Carpal tunnel syndrome");
-                    if (symptoms.some(s => s.includes("snapping"))) conditions.push("De Quervain's tenosynovitis");
-                    if (conditions.length === 0) conditions.push("Wrist strain or tendinopathy");
-                    advice = "Neural glides, thumb spica splinting, activity modification.";
-                    break;
-                default:
-                    conditions.push("Undefined region");
-                    advice = "Please select a valid body region.";
-            }
-            let severity = (painScore >= 7) ? "High pain" : (painScore >= 4 ? "Moderate" : "Mild");
-            let functional = functionScore <= 3 ? "Poor function" : (functionScore <= 6 ? "Moderate" : "Good function");
+        function aiDiagnose(region, symptoms, painScore, functionScore, isSpecialist) {
+            if (!region || symptoms.length===0) return "⚠️ Select region and symptoms.";
+            let conditions=[], advice="";
+            const map = {
+                neck: { rad: "Cervical radiculopathy", head: "Cervicogenic headache", fallback: "Mechanical neck pain", adv: "Upper cervical mobs, posture correction." },
+                shoulder: { rad: "Rotator cuff tendinopathy", night: "Subacromial pain syndrome", fallback: "Shoulder impingement", adv: "Isometrics, rotator cuff strengthening." },
+                upperback: { rad: "Thoracic radiculopathy", stiff: "Thoracic facet dysfunction", fallback: "Postural thoracic pain", adv: "Thoracic extension mobs, scapular retractions." },
+                lowerback: { rad: "Lumbar radiculopathy", stiff: "Inflammatory pattern", fallback: "Mechanical LBP", adv: "Extension-based exercises, core stability." },
+                hip: { groin: "Hip OA/FAI", click: "Snapping hip", fallback: "Gluteal tendinopathy", adv: "Hip flexor stretch, glute strengthening." },
+                knee: { stairs: "Patellofemoral pain", lock: "Possible meniscal tear", fallback: "Patellar tendinopathy", adv: "VMO strengthening, glute med, step-downs." },
+                ankle: { instab: "Chronic ankle instability", swell: "Lateral ankle sprain", fallback: "Ankle impingement", adv: "Proprioception, calf raises." },
+                foot: { heel: "Plantar fasciopathy", arch: "PTT dysfunction", fallback: "Metatarsalgia", adv: "Calf stretching, arch supports." },
+                elbow: { outside: "Lateral epicondylalgia", inside: "Medial epicondylalgia", fallback: "Olecranon bursitis", adv: "Eccentric wrist exercises." },
+                wrist: { numb: "Carpal tunnel", snap: "De Quervain's", fallback: "Wrist strain", adv: "Neural glides, thumb spica." }
+            };
+            const m = map[region];
+            if (m) {
+                if (symptoms.some(s=>s.includes("Radiating") || s.includes("Tingling"))) conditions.push(m.rad);
+                else if (symptoms.some(s=>s.includes("Headaches"))) conditions.push(m.head);
+                else if (symptoms.some(s=>s.includes("groin"))) conditions.push(m.groin);
+                else if (symptoms.some(s=>s.includes("clicking"))) conditions.push(m.click);
+                else if (symptoms.some(s=>s.includes("stairs"))) conditions.push(m.stairs);
+                else if (symptoms.some(s=>s.includes("Locking"))) conditions.push(m.lock);
+                else if (symptoms.some(s=>s.includes("instability"))) conditions.push(m.instab);
+                else if (symptoms.some(s=>s.includes("swelling"))) conditions.push(m.swell);
+                else if (symptoms.some(s=>s.includes("Heel pain"))) conditions.push(m.heel);
+                else if (symptoms.some(s=>s.includes("Arch pain"))) conditions.push(m.arch);
+                else if (symptoms.some(s=>s.includes("outside"))) conditions.push(m.outside);
+                else if (symptoms.some(s=>s.includes("inside"))) conditions.push(m.inside);
+                else if (symptoms.some(s=>s.includes("Numbness"))) conditions.push(m.numb);
+                else if (symptoms.some(s=>s.includes("snapping"))) conditions.push(m.snap);
+                else conditions.push(m.fallback);
+                advice = m.adv;
+            } else { conditions.push("Regional pain"); advice="General mobility."; }
+            let severity = painScore>=7?"High":(painScore>=4?"Moderate":"Mild");
+            let functional = functionScore<=3?"Poor":(functionScore<=6?"Moderate":"Good");
             let report = `📍 Region: ${region.toUpperCase()}\n📋 Symptoms: ${symptoms.join(", ")}\n📊 Pain: ${painScore}/10 (${severity}) | Function: ${functionScore}/10 (${functional})\n\n🔍 Possible conditions: ${conditions.join("; ")}\n💡 Clinical advice: ${advice}`;
             if (isSpecialist) report += `\n\n🩺 Specialist review: PT_Dave will follow up via WhatsApp.`;
             return report;
         }
-
         function getExercisePrescription(region) {
-            const exercises = {
-                neck: "Chin tucks, upper trap stretch, deep neck flexor activation.",
-                shoulder: "Pendulum swings, external rotation isometrics, scapular retractions.",
-                upperback: "Thoracic extension over foam roller, wall angels, prone Y-T-W exercises.",
-                lowerback: "McKenzie press‑ups, bird‑dog, pelvic tilts.",
-                hip: "Clamshells, bridges, standing hip flexor stretch, side‑lying leg lifts.",
-                knee: "Straight leg raises, mini squats, terminal knee extensions.",
-                ankle: "Calf raises, wobble board balance, resisted inversion/eversion.",
-                foot: "Towel curls, intrinsic foot muscle exercises, calf stretching.",
-                elbow: "Wrist extensor eccentric (Therabar), grip strengthening, forearm massage.",
-                wrist: "Median nerve glides, thumb stretches, gentle grip exercises."
+            const ex = {
+                neck: "Chin tucks, upper trap stretch.",
+                shoulder: "Pendulum swings, isometrics.",
+                upperback: "Thoracic foam roller, wall angels.",
+                lowerback: "McKenzie press-ups, bird-dog.",
+                hip: "Clamshells, bridges.",
+                knee: "SLR, mini squats.",
+                ankle: "Calf raises, wobble board.",
+                foot: "Towel curls, calf stretching.",
+                elbow: "Eccentric wrist extensions.",
+                wrist: "Median nerve glides."
             };
-            return exercises[region] || "General mobility and strengthening for affected area.";
+            return ex[region] || "General strengthening.";
         }
-
-        // Render symptoms checkboxes
-        function renderSymptoms(region, containerId, selectedSet = new Set()) {
+        function renderSymptoms(region, containerId, selectedSet) {
             const container = document.getElementById(containerId);
             const symptoms = symptomMap[region];
             if (!symptoms) { container.innerHTML = '<span class="text-gray-400 text-xs">Select region first</span>'; return; }
-            let html = '';
-            symptoms.forEach(sym => {
-                const checked = selectedSet.has(sym) ? 'checked' : '';
-                html += `<label class="inline-flex items-center gap-1 bg-white border rounded-full px-2 py-0.5 text-xs shadow-sm"><input type="checkbox" value="${escapeHtml(sym)}" class="symptom-checkbox w-3 h-3" ${checked}> <span>${escapeHtml(sym)}</span></label>`;
+            let html='';
+            symptoms.forEach(sym=>{
+                let checked = selectedSet.has(sym)?'checked':'';
+                html+=`<label class="inline-flex items-center gap-1 bg-white border rounded-full px-2 py-0.5 text-xs"><input type="checkbox" value="${escapeHtml(sym)}" class="symptom-checkbox" ${checked}> <span>${escapeHtml(sym)}</span></label>`;
             });
-            container.innerHTML = html;
+            container.innerHTML=html;
         }
+        function escapeHtml(str){ return str.replace(/[&<>]/g, m=>({ '&':'&amp;', '<':'&lt;', '>':'&gt;' }[m])); }
 
-        function escapeHtml(str) { return str.replace(/[&<>]/g, function(m){ if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m;}); }
-
-        // ========= VISUAL DIAGNOSTIC SCREEN (SVG Body Map) =========
-        function getBodySvgForRegion(region) {
-            // Simplified body outline with highlightable regions
-            // We'll use a simple SVG with paths that can be colored differently
-            // For brevity, we'll create a generic body shape and then highlight the region by adding a glow or changing stroke.
-            // But to make it dynamic, we'll predefine region-specific highlighting via CSS classes.
-            // Actually, easier: we'll just display a nice SVG and overlay a "scanning line" animation.
-            // Since the user wants a "diagnostic screen", we'll show a stylized human figure.
-            const baseSvg = `
-                <svg viewBox="0 0 200 400" xmlns="http://www.w3.org/2000/svg" style="width:100%; height:auto;">
-                    <!-- Head -->
-                    <circle cx="100" cy="50" r="20" fill="none" stroke="white" stroke-width="2" class="region-head"/>
-                    <!-- Neck -->
-                    <rect x="90" y="70" width="20" height="20" fill="none" stroke="white" stroke-width="2" class="region-neck"/>
-                    <!-- Shoulders / Upper back -->
-                    <path d="M70 90 L130 90 L140 110 L60 110 Z" fill="none" stroke="white" stroke-width="2" class="region-shoulder"/>
-                    <!-- Thoracic / Upper back -->
-                    <rect x="75" y="110" width="50" height="40" fill="none" stroke="white" stroke-width="2" class="region-upperback"/>
-                    <!-- Lumbar / Lower back -->
-                    <rect x="75" y="150" width="50" height="50" fill="none" stroke="white" stroke-width="2" class="region-lowerback"/>
-                    <!-- Hips -->
-                    <path d="M60 200 L140 200 L130 220 L70 220 Z" fill="none" stroke="white" stroke-width="2" class="region-hip"/>
-                    <!-- Legs -->
-                    <line x1="80" y1="220" x2="80" y2="320" stroke="white" stroke-width="4" class="region-leg"/>
-                    <line x1="120" y1="220" x2="120" y2="320" stroke="white" stroke-width="4" class="region-leg"/>
-                    <!-- Knees markers -->
-                    <circle cx="80" cy="300" r="4" fill="white" class="region-knee"/>
-                    <circle cx="120" cy="300" r="4" fill="white" class="region-knee"/>
-                    <!-- Ankles -->
-                    <circle cx="80" cy="350" r="3" fill="white" class="region-ankle"/>
-                    <circle cx="120" cy="350" r="3" fill="white" class="region-ankle"/>
-                    <!-- Feet -->
-                    <path d="M70 355 L90 355 L90 365 L70 365 Z" fill="none" stroke="white" stroke-width="2" class="region-foot"/>
-                    <path d="M110 355 L130 355 L130 365 L110 365 Z" fill="none" stroke="white" stroke-width="2" class="region-foot"/>
-                    <!-- Arms -->
-                    <line x1="60" y1="100" x2="30" y2="160" stroke="white" stroke-width="4" class="region-arm"/>
-                    <line x1="140" y1="100" x2="170" y2="160" stroke="white" stroke-width="4" class="region-arm"/>
-                    <!-- Elbows -->
-                    <circle cx="30" cy="160" r="4" fill="white" class="region-elbow"/>
-                    <circle cx="170" cy="160" r="4" fill="white" class="region-elbow"/>
-                    <!-- Wrists -->
-                    <circle cx="20" cy="200" r="3" fill="white" class="region-wrist"/>
-                    <circle cx="180" cy="200" r="3" fill="white" class="region-wrist"/>
-                </svg>
-            `;
-            // We'll add a CSS class to highlight the selected region
-            // For simplicity, we'll wrap the SVG in a div and use JS to add a glowing overlay or change stroke color.
-            return baseSvg;
-        }
-
-        function showDiagnosticScreen(region, callback) {
-            const modal = document.getElementById("diagnosticModal");
-            const container = document.getElementById("bodySvgContainer");
-            container.innerHTML = getBodySvgForRegion(region);
-            // Add highlight class to the corresponding SVG element based on region
-            const svg = container.querySelector("svg");
-            if (svg) {
-                // Map region to class name
-                let className = "";
-                switch(region) {
-                    case "neck": className = "region-neck"; break;
-                    case "shoulder": className = "region-shoulder"; break;
-                    case "upperback": className = "region-upperback"; break;
-                    case "lowerback": className = "region-lowerback"; break;
-                    case "hip": className = "region-hip"; break;
-                    case "knee": className = "region-knee"; break;
-                    case "ankle": className = "region-ankle"; break;
-                    case "foot": className = "region-foot"; break;
-                    case "elbow": className = "region-elbow"; break;
-                    case "wrist": className = "region-wrist"; break;
-                    default: className = "";
-                }
-                if (className) {
-                    const elements = svg.querySelectorAll(`.${className}`);
-                    elements.forEach(el => {
-                        el.setAttribute("stroke", "cyan");
-                        el.setAttribute("stroke-width", "4");
-                        el.classList.add("region-glow");
-                    });
-                }
-                // Add scanning line animation (a moving gradient or line)
-                // We'll add a <line> that moves vertically
-                const scanLine = document.createElementNS("http://www.w3.org/2000/svg", "line");
-                scanLine.setAttribute("x1", "0");
-                scanLine.setAttribute("y1", "0");
-                scanLine.setAttribute("x2", "200");
-                scanLine.setAttribute("y2", "0");
-                scanLine.setAttribute("stroke", "cyan");
-                scanLine.setAttribute("stroke-width", "2");
-                scanLine.style.animation = "scanMoveSvg 1.2s linear infinite";
-                svg.appendChild(scanLine);
-                // Animate y position (simpler: use CSS)
-                // Alternatively, we can just rely on the progress bar.
-            }
-            modal.classList.add("active");
-            // Animate progress bar
-            const progressBar = modal.querySelector(".scan-progress-bar");
-            if (progressBar) {
-                progressBar.style.transition = "width 1.8s linear";
-                progressBar.style.width = "100%";
-            }
-            setTimeout(() => {
-                modal.classList.remove("active");
-                // Reset progress bar
-                if (progressBar) progressBar.style.width = "0%";
-                callback();
-            }, 1800);
-        }
-
-        // ========= Vault and other functions (unchanged from previous working version) =========
+        // Vault
         let VAULT_PASSWORD = "PT_Dave2025";
         let reportsArray = [];
+        function loadReports(){ const s=localStorage.getItem("PT_Dave_Reports"); reportsArray = s?JSON.parse(s):[]; }
+        function saveReports(){ localStorage.setItem("PT_Dave_Reports",JSON.stringify(reportsArray)); }
+        function addReport(patient, type, text, meta={}){ reportsArray.unshift({ id:Date.now()+Math.random(), patient, type, date:new Date().toLocaleString(), report:text, meta }); saveReports(); showToast(`Saved to vault (${type})`); }
+        function displayVault(){
+            const c=document.getElementById("vaultContent");
+            if(reportsArray.length===0){ c.innerHTML='<div class="text-center p-8">No reports.</div>'; return; }
+            let html='<div class="space-y-3">';
+            reportsArray.forEach(r=>{ html+=`<div class="border p-3 rounded"><div><strong>${escapeHtml(r.patient)}</strong> · ${r.type} · ${r.date}</div><div class="text-xs mt-1">${r.report.substring(0,100)}...</div><div class="flex gap-2 mt-2"><button class="view-report-btn text-xs bg-indigo-100 px-2 py-1 rounded" data-id="${r.id}">View</button><button class="delete-report-btn text-xs bg-red-100 px-2 py-1 rounded" data-id="${r.id}">Delete</button></div></div>`; });
+            html+='</div>';
+            c.innerHTML=html;
+            document.querySelectorAll(".view-report-btn").forEach(btn=>btn.addEventListener("click",()=>{ let id=parseFloat(btn.dataset.id); let rep=reportsArray.find(r=>r.id===id); if(rep) alert(rep.report); }));
+            document.querySelectorAll(".delete-report-btn").forEach(btn=>btn.addEventListener("click",()=>{ let id=parseFloat(btn.dataset.id); reportsArray=reportsArray.filter(r=>r.id!==id); saveReports(); displayVault(); showToast("Deleted"); }));
+        }
+        function showToast(msg,type='success'){ let t=document.getElementById("toast"); t.innerText=msg; t.classList.remove("hidden","bg-red-600","bg-green-600"); t.classList.add(type==='error'?"bg-red-600":"bg-green-600"); setTimeout(()=>t.classList.add("hidden"),3000); }
 
-        function loadReportsFromStorage() {
-            const stored = localStorage.getItem("PT_Dave_Reports");
-            if (stored) reportsArray = JSON.parse(stored);
-            else reportsArray = [];
-        }
-        function saveReportsToStorage() { localStorage.setItem("PT_Dave_Reports", JSON.stringify(reportsArray)); }
-        function addReport(patientName, scanType, reportText, extraMeta = {}) {
-            const newReport = { id: Date.now() + Math.random(), patient: patientName || "Anonymous", type: scanType, date: new Date().toLocaleString(), report: reportText, meta: extraMeta };
-            reportsArray.unshift(newReport);
-            saveReportsToStorage();
-            showToast(`Report saved to vault (${scanType})`, "success");
-        }
-        function displayVaultReports() {
-            const container = document.getElementById("vaultContent");
-            if (reportsArray.length === 0) {
-                container.innerHTML = '<div class="text-gray-500 text-center p-8">No reports yet. Scans will appear here.</div>';
-                document.getElementById("exportVaultBtn").classList.add("hidden");
-                document.getElementById("clearVaultBtn").classList.add("hidden");
+        // Diagnostic Modal (10 sec)
+        function showDiagnosticScreen(callback){
+            const modal=document.getElementById("diagnosticModal");
+            if(!modal){
+                // create simple fallback
+                callback();
                 return;
             }
-            let html = `<div class="space-y-3">`;
-            reportsArray.forEach(r => {
-                html += `<div class="border rounded-lg p-3 bg-gray-50"><div class="flex justify-between items-start flex-wrap gap-2"><div><strong>${escapeHtml(r.patient)}</strong> · ${r.type} scan · ${r.date}</div><div class="flex gap-2"><button class="view-report-btn text-xs bg-indigo-100 px-2 py-1 rounded" data-id="${r.id}">View</button><button class="delete-report-btn text-xs bg-red-100 px-2 py-1 rounded" data-id="${r.id}">Delete</button></div></div><div class="text-xs text-gray-600 mt-1">${r.report.substring(0, 100)}...</div></div>`;
-            });
-            html += `</div>`;
-            container.innerHTML = html;
-            document.getElementById("exportVaultBtn").classList.remove("hidden");
-            document.getElementById("clearVaultBtn").classList.remove("hidden");
-            document.querySelectorAll(".view-report-btn").forEach(btn => {
-                btn.addEventListener("click", (e) => {
-                    const id = parseFloat(btn.getAttribute("data-id"));
-                    const report = reportsArray.find(r => r.id === id);
-                    if (report) alert(`Full Report for ${report.patient} (${report.type})\n\n${report.report}`);
-                });
-            });
-            document.querySelectorAll(".delete-report-btn").forEach(btn => {
-                btn.addEventListener("click", (e) => {
-                    const id = parseFloat(btn.getAttribute("data-id"));
-                    reportsArray = reportsArray.filter(r => r.id !== id);
-                    saveReportsToStorage();
-                    displayVaultReports();
-                    showToast("Report deleted", "success");
-                });
-            });
+            modal.classList.add("active");
+            const bar=modal.querySelector(".scan-progress-bar");
+            if(bar) bar.style.width="100%";
+            setTimeout(()=>{ modal.classList.remove("active"); if(bar) bar.style.width="0%"; callback(); }, 10000);
         }
-        function exportAllReports() {
-            const dataStr = JSON.stringify(reportsArray, null, 2);
-            const blob = new Blob([dataStr], {type: "application/json"});
-            const a = document.createElement("a");
-            a.href = URL.createObjectURL(blob);
-            a.download = `PT_Dave_reports_${Date.now()}.json`;
-            a.click();
-            URL.revokeObjectURL(a.href);
-        }
-        function clearAllReports() {
-            if (confirm("Delete ALL reports permanently?")) {
-                reportsArray = [];
-                saveReportsToStorage();
-                displayVaultReports();
-                showToast("All reports cleared", "success");
-            }
-        }
-        function showToast(msg, type) {
-            const toast = document.getElementById("toast");
-            toast.innerText = msg;
-            toast.classList.remove("hidden", "bg-red-600", "bg-green-600");
-            toast.classList.add(type === "error" ? "bg-red-600" : "bg-green-600");
-            setTimeout(() => toast.classList.add("hidden"), 3000);
+        // Inject modal if not present (for completeness)
+        if(!document.getElementById("diagnosticModal")){
+            const div=document.createElement("div"); div.id="diagnosticModal"; div.className="diagnostic-modal"; div.innerHTML=`<div class="scanner-card"><i class="fas fa-microchip text-4xl text-cyan-400"></i><p class="text-white font-mono">AI SCANNING</p><div class="h-1 bg-gray-700 w-48 mt-4 rounded"><div class="scan-progress-bar h-full bg-cyan-400 rounded" style="width:0%"></div></div><p class="text-gray-300 text-sm mt-3">Analyzing...</p></div>`;
+            document.body.appendChild(div);
         }
 
-        // ========= Basic Scan with visual diagnostic screen =========
-        let basicSelectedRegion = null;
-        let basicSelectedSymptoms = new Set();
-
-        function refreshBasicSymptoms() {
-            if (basicSelectedRegion) {
-                renderSymptoms(basicSelectedRegion, "basicSymptomsContainer", basicSelectedSymptoms);
-                document.querySelectorAll("#basicSymptomsContainer .symptom-checkbox").forEach(cb => {
-                    cb.addEventListener("change", (e) => {
-                        if (e.target.checked) basicSelectedSymptoms.add(e.target.value);
-                        else basicSelectedSymptoms.delete(e.target.value);
-                    });
-                });
-            } else {
-                document.getElementById("basicSymptomsContainer").innerHTML = '<span class="text-gray-400 text-xs">Select region first</span>';
-            }
-        }
-
-        document.querySelectorAll(".basic-region-btn").forEach(btn => {
-            btn.addEventListener("click", () => {
-                basicSelectedRegion = btn.getAttribute("data-region");
-                document.querySelectorAll(".basic-region-btn").forEach(b => b.classList.remove("bg-indigo-100", "border-indigo-500"));
-                btn.classList.add("bg-indigo-100", "border-indigo-500");
-                basicSelectedSymptoms.clear();
-                refreshBasicSymptoms();
-                document.getElementById("basicResult").innerHTML = "⚡ Ready";
-            });
-        });
-
-        document.getElementById("basicScanBtn").addEventListener("click", () => {
-            if (!basicSelectedRegion) { showToast("Select body region", "error"); return; }
-            if (basicSelectedSymptoms.size === 0) { showToast("Select at least one symptom", "error"); return; }
-            const pain = parseInt(document.getElementById("basicPain").value);
-            const func = parseInt(document.getElementById("basicFunc").value);
-            const patientName = document.getElementById("basicPatientName").value.trim() || "Anonymous";
-            
-            showDiagnosticScreen(basicSelectedRegion, () => {
-                const report = aiDiagnose(basicSelectedRegion, Array.from(basicSelectedSymptoms), pain, func, false);
-                const exercise = getExercisePrescription(basicSelectedRegion);
-                const fullReport = `PATIENT: ${patientName}\n\n${report}\n\n🏋️ EXERCISE: ${exercise}`;
-                document.getElementById("basicResult").innerHTML = fullReport.replace(/\n/g, "<br>");
-                document.getElementById("basicExerciseText").innerText = exercise;
+        // Basic scanner UI
+        let basicRegion=null, basicSymptoms=new Set();
+        function refreshBasicSymptoms(){ if(basicRegion){ renderSymptoms(basicRegion,"basicSymptomsContainer",basicSymptoms); document.querySelectorAll("#basicSymptomsContainer .symptom-checkbox").forEach(cb=>cb.addEventListener("change",e=>e.target.checked?basicSymptoms.add(e.target.value):basicSymptoms.delete(e.target.value))); } else document.getElementById("basicSymptomsContainer").innerHTML='<span class="text-gray-400 text-xs">Select region first</span>'; }
+        document.querySelectorAll(".basic-region-btn").forEach(btn=>btn.addEventListener("click",()=>{ basicRegion=btn.dataset.region; document.querySelectorAll(".basic-region-btn").forEach(b=>b.classList.remove("bg-indigo-100","border-indigo-500")); btn.classList.add("bg-indigo-100","border-indigo-500"); basicSymptoms.clear(); refreshBasicSymptoms(); document.getElementById("basicResult").innerHTML="⚡ Ready"; }));
+        document.getElementById("basicScanBtn").addEventListener("click",()=>{
+            if(!basicRegion){ showToast("Select region","error"); return; }
+            if(basicSymptoms.size===0){ showToast("Select symptoms","error"); return; }
+            let pain=parseInt(document.getElementById("basicPain").value);
+            let func=parseInt(document.getElementById("basicFunc").value);
+            let name=document.getElementById("basicPatientName").value.trim()||"Anonymous";
+            showDiagnosticScreen(()=>{
+                let report=aiDiagnose(basicRegion,Array.from(basicSymptoms),pain,func,false);
+                let ex=getExercisePrescription(basicRegion);
+                let full=`PATIENT: ${name}\n\n${report}\n\n🏋️ EXERCISE: ${ex}`;
+                document.getElementById("basicResult").innerHTML=full.replace(/\n/g,"<br>");
+                document.getElementById("basicExerciseText").innerText=ex;
                 document.getElementById("basicExerciseBox").classList.remove("hidden");
-                addReport(patientName, "Basic", fullReport);
-                const whatsappMsg = encodeURIComponent(fullReport);
-                window.open(`https://wa.me/2349061832609?text=${whatsappMsg}`, "_blank");
-                showToast("Basic scan done. Report sent to PT_Dave on WhatsApp", "success");
+                addReport(name,"Basic",full);
+                let msg=encodeURIComponent(full);
+                window.open(`https://wa.me/2349061832609?text=${msg}`,"_blank");
+                showToast("Basic scan done. Report sent to PT_Dave on WhatsApp");
             });
         });
 
-        // ========= Specialist Scan (similar, but after payment) =========
-        let specSelectedRegion = null;
-        let specSelectedSymptoms = new Set();
-
-        function refreshSpecialistSymptoms() {
-            if (specSelectedRegion) {
-                renderSymptoms(specSelectedRegion, "specialistSymptomsContainer", specSelectedSymptoms);
-                document.querySelectorAll("#specialistSymptomsContainer .symptom-checkbox").forEach(cb => {
-                    cb.addEventListener("change", (e) => {
-                        if (e.target.checked) specSelectedSymptoms.add(e.target.value);
-                        else specSelectedSymptoms.delete(e.target.value);
-                    });
-                });
-            } else {
-                document.getElementById("specialistSymptomsContainer").innerHTML = '<span class="text-gray-400 text-xs">Select region first</span>';
-            }
-        }
-
-        document.querySelectorAll(".spec-region-btn").forEach(btn => {
-            btn.addEventListener("click", () => {
-                specSelectedRegion = btn.getAttribute("data-spec-region");
-                document.querySelectorAll(".spec-region-btn").forEach(b => b.classList.remove("bg-amber-100", "border-amber-500"));
-                btn.classList.add("bg-amber-100", "border-amber-500");
-                specSelectedSymptoms.clear();
-                refreshSpecialistSymptoms();
-                document.getElementById("specialistResult").innerHTML = "🔒 Unlock with payment";
-            });
-        });
-
-        document.getElementById("paystackPayBtn").addEventListener("click", () => {
-            const patientName = document.getElementById("specialistPatientName").value.trim();
-            if (!patientName) { showToast("Enter patient full name", "error"); return; }
-            const patientPhone = document.getElementById("specialistPatientPhone").value.trim();
-            if (!patientPhone || !patientPhone.match(/^\d{10,15}$/)) { showToast("Valid WhatsApp number required", "error"); return; }
-            if (!specSelectedRegion) { showToast("Select body region", "error"); return; }
-            if (specSelectedSymptoms.size === 0) { showToast("Select at least one symptom", "error"); return; }
-
-            const paystack = new PaystackPop();
+        // Specialist scanner (Paystack)
+        let specRegion=null, specSymptoms=new Set();
+        function refreshSpecSymptoms(){ if(specRegion){ renderSymptoms(specRegion,"specialistSymptomsContainer",specSymptoms); document.querySelectorAll("#specialistSymptomsContainer .symptom-checkbox").forEach(cb=>cb.addEventListener("change",e=>e.target.checked?specSymptoms.add(e.target.value):specSymptoms.delete(e.target.value))); } else document.getElementById("specialistSymptomsContainer").innerHTML='<span class="text-gray-400 text-xs">Select region first</span>'; }
+        document.querySelectorAll(".spec-region-btn").forEach(btn=>btn.addEventListener("click",()=>{ specRegion=btn.dataset.specRegion; document.querySelectorAll(".spec-region-btn").forEach(b=>b.classList.remove("bg-amber-100","border-amber-500")); btn.classList.add("bg-amber-100","border-amber-500"); specSymptoms.clear(); refreshSpecSymptoms(); document.getElementById("specialistResult").innerHTML="🔒 Unlock with payment"; }));
+        document.getElementById("paystackPayBtn").addEventListener("click",()=>{
+            let name=document.getElementById("specialistPatientName").value.trim();
+            let phone=document.getElementById("specialistPatientPhone").value.trim();
+            if(!name){ showToast("Enter name","error"); return; }
+            if(!phone.match(/^\d{10,15}$/)){ showToast("Valid WhatsApp number","error"); return; }
+            if(!specRegion){ showToast("Select region","error"); return; }
+            if(specSymptoms.size===0){ showToast("Select symptoms","error"); return; }
+            let paystack = new PaystackPop();
             paystack.newTransaction({
                 key: "pk_live_ef67461cd9b75a09bf05c7c5c588dea850470cdf",
-                email: `${patientName.replace(/\s/g, "")}@patient.com`,
+                email: name.replace(/\s/g,"")+"@patient.com",
                 amount: 1000000,
                 currency: "NGN",
-                ref: "PTD_" + Math.floor(Math.random() * 1000000000) + Date.now(),
-                onSuccess: () => {
-                    showToast("Payment successful! Running scan...", "success");
-                    showDiagnosticScreen(specSelectedRegion, () => {
-                        const pain = parseInt(document.getElementById("specPain").value);
-                        const func = parseInt(document.getElementById("specFunc").value);
-                        const report = aiDiagnose(specSelectedRegion, Array.from(specSelectedSymptoms), pain, func, true);
-                        const exercise = getExercisePrescription(specSelectedRegion);
-                        const fullReport = `PATIENT: ${patientName}\nPHONE: ${patientPhone}\n\n${report}\n\n🏋️ EXERCISE: ${exercise}`;
-                        document.getElementById("specialistResult").innerHTML = fullReport.replace(/\n/g, "<br>");
-                        document.getElementById("specialistExerciseText").innerText = exercise;
+                ref: "PTD_"+Date.now()+Math.random(),
+                onSuccess:()=>{
+                    showToast("Payment successful! Running scan...");
+                    showDiagnosticScreen(()=>{
+                        let pain=parseInt(document.getElementById("specPain").value);
+                        let func=parseInt(document.getElementById("specFunc").value);
+                        let report=aiDiagnose(specRegion,Array.from(specSymptoms),pain,func,true);
+                        let ex=getExercisePrescription(specRegion);
+                        let full=`PATIENT: ${name}\nPHONE: ${phone}\n\n${report}\n\n🏋️ EXERCISE: ${ex}`;
+                        document.getElementById("specialistResult").innerHTML=full.replace(/\n/g,"<br>");
+                        document.getElementById("specialistExerciseText").innerText=ex;
                         document.getElementById("specialistExerciseBox").classList.remove("hidden");
-                        addReport(patientName, "Specialist (Paid)", fullReport, { phone: patientPhone });
-                        const whatsappMsg = encodeURIComponent(fullReport);
-                        window.open(`https://wa.me/2349061832609?text=${whatsappMsg}`, "_blank");
-                        showToast("Specialist report sent to PT_Dave and saved to vault", "success");
+                        addReport(name,"Specialist (Paid)",full,{phone});
+                        let msg=encodeURIComponent(full);
+                        window.open(`https://wa.me/2349061832609?text=${msg}`,"_blank");
+                        showToast("Specialist report sent to PT_Dave");
                     });
                 },
-                onCancel: () => showToast("Payment cancelled", "error")
+                onCancel:()=>showToast("Payment cancelled","error")
             });
         });
 
         // Sliders
-        const basicPain = document.getElementById("basicPain"), basicPainVal = document.getElementById("basicPainVal");
-        const basicFunc = document.getElementById("basicFunc"), basicFuncVal = document.getElementById("basicFuncVal");
-        basicPain.addEventListener("input", () => basicPainVal.innerText = basicPain.value);
-        basicFunc.addEventListener("input", () => basicFuncVal.innerText = basicFunc.value);
-        const specPain = document.getElementById("specPain"), specPainVal = document.getElementById("specPainVal");
-        const specFunc = document.getElementById("specFunc"), specFuncVal = document.getElementById("specFuncVal");
-        specPain.addEventListener("input", () => specPainVal.innerText = specPain.value);
-        specFunc.addEventListener("input", () => specFuncVal.innerText = specFunc.value);
+        document.getElementById("basicPain").addEventListener("input",e=>document.getElementById("basicPainVal").innerText=e.target.value);
+        document.getElementById("basicFunc").addEventListener("input",e=>document.getElementById("basicFuncVal").innerText=e.target.value);
+        document.getElementById("specPain").addEventListener("input",e=>document.getElementById("specPainVal").innerText=e.target.value);
+        document.getElementById("specFunc").addEventListener("input",e=>document.getElementById("specFuncVal").innerText=e.target.value);
 
-        // Vault controls
-        document.getElementById("vaultLockBtn").addEventListener("click", () => {
-            const modal = document.getElementById("vaultModal");
+        // Vault button
+        document.getElementById("vaultLockBtn").addEventListener("click",()=>{
+            let modal=document.getElementById("vaultModal");
             modal.classList.add("active");
-            const pwd = prompt("Enter vault password:");
-            if (pwd === VAULT_PASSWORD) {
-                loadReportsFromStorage();
-                displayVaultReports();
-            } else if (pwd !== null) {
-                alert("Wrong password!");
-                modal.classList.remove("active");
-            } else {
-                modal.classList.remove("active");
-            }
+            let pwd=prompt("Vault password:");
+            if(pwd===VAULT_PASSWORD){ loadReports(); displayVault(); } else { alert("Wrong password"); modal.classList.remove("active"); }
         });
-        document.getElementById("closeVaultBtn").addEventListener("click", () => {
-            document.getElementById("vaultModal").classList.remove("active");
+        document.getElementById("closeVaultBtn").addEventListener("click",()=>document.getElementById("vaultModal").classList.remove("active"));
+        document.getElementById("exportVaultBtn").addEventListener("click",()=>{ let data=JSON.stringify(reportsArray,null,2); let a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([data])); a.download="reports.json"; a.click(); });
+        document.getElementById("clearVaultBtn").addEventListener("click",()=>{ if(confirm("Delete all?")){ reportsArray=[]; saveReports(); displayVault(); showToast("All cleared"); } });
+        document.getElementById("whatsappContactBtn").addEventListener("click",e=>{ e.preventDefault(); window.open("https://wa.me/2349061832609?text=Hello%20PT_Dave"); });
+
+        // Tab switching
+        const symptomTab=document.getElementById("symptomTabBtn");
+        const postureTab=document.getElementById("postureTabBtn");
+        const symptomSection=document.getElementById("symptomSection");
+        const postureSection=document.getElementById("postureSection");
+        symptomTab.addEventListener("click",()=>{
+            symptomTab.classList.add("border-indigo-700","text-indigo-700"); symptomTab.classList.remove("text-gray-500","border-transparent");
+            postureTab.classList.remove("border-indigo-700","text-indigo-700"); postureTab.classList.add("text-gray-500","border-transparent");
+            symptomSection.classList.remove("hidden"); postureSection.classList.add("hidden");
+            // stop camera if running
+            if(window.postureStream) window.postureStream.getTracks().forEach(t=>t.stop());
         });
-        document.getElementById("exportVaultBtn").addEventListener("click", exportAllReports);
-        document.getElementById("clearVaultBtn").addEventListener("click", clearAllReports);
-        document.getElementById("whatsappContactBtn").addEventListener("click", (e) => {
-            e.preventDefault();
-            window.open("https://wa.me/2349061832609?text=Hello%20PT_Dave%2C%20I%20need%20physio%20advice", "_blank");
+        postureTab.addEventListener("click",()=>{
+            postureTab.classList.add("border-indigo-700","text-indigo-700"); postureTab.classList.remove("text-gray-500","border-transparent");
+            symptomTab.classList.remove("border-indigo-700","text-indigo-700"); symptomTab.classList.add("text-gray-500","border-transparent");
+            postureSection.classList.remove("hidden"); symptomSection.classList.add("hidden");
+            initCamera();
         });
 
-        loadReportsFromStorage();
-        setTimeout(() => {
-            const defaultBasic = document.querySelector(".basic-region-btn[data-region='neck']");
-            if (defaultBasic) defaultBasic.click();
-            const defaultSpec = document.querySelector(".spec-region-btn[data-spec-region='neck']");
-            if (defaultSpec) defaultSpec.click();
-        }, 100);
+        // ========= LIVE POSTURE ANALYSIS =========
+        let postureVideo, postureCanvas, ctx, detector, cameraActive=false, currentStream=null;
+        async function initCamera(){
+            postureVideo = document.getElementById("postureVideo");
+            postureCanvas = document.getElementById("postureCanvas");
+            if(!postureVideo) return;
+            if(currentStream) currentStream.getTracks().forEach(t=>t.stop());
+            try{
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+                currentStream = stream;
+                postureVideo.srcObject = stream;
+                await postureVideo.play();
+                postureCanvas.width = postureVideo.videoWidth;
+                postureCanvas.height = postureVideo.videoHeight;
+                ctx = postureCanvas.getContext("2d");
+                cameraActive=true;
+                // load pose detector
+                if(!detector){
+                    detector = await poseDetection.createDetector(poseDetection.SupportedModels.MoveNet, { modelType: poseDetection.movenet.modelType.SINGLEPOSE_LIGHTNING });
+                }
+                requestAnimationFrame(detectPose);
+                document.getElementById("postureFeedback").innerHTML = "Camera active. Stand in front of camera for analysis.";
+            } catch(e){
+                document.getElementById("postureFeedback").innerHTML = "Camera access denied or not available.";
+                showToast("Camera error","error");
+            }
+        }
+        async function detectPose(){
+            if(!cameraActive || !postureVideo || postureVideo.paused || postureVideo.ended) return;
+            if(postureVideo.readyState < 2){
+                requestAnimationFrame(detectPose);
+                return;
+            }
+            if(postureCanvas.width !== postureVideo.videoWidth || postureCanvas.height !== postureVideo.videoHeight){
+                postureCanvas.width = postureVideo.videoWidth;
+                postureCanvas.height = postureVideo.videoHeight;
+            }
+            ctx.clearRect(0,0,postureCanvas.width,postureCanvas.height);
+            ctx.drawImage(postureVideo,0,0,postureCanvas.width,postureCanvas.height);
+            if(detector){
+                const poses = await detector.estimatePoses(postureVideo);
+                if(poses.length>0){
+                    drawKeypoints(poses[0].keypoints);
+                    analyzePosture(poses[0].keypoints);
+                } else {
+                    document.getElementById("postureFeedback").innerHTML = "No person detected. Adjust position.";
+                }
+            }
+            requestAnimationFrame(detectPose);
+        }
+        function drawKeypoints(keypoints){
+            for(let kp of keypoints){
+                if(kp.score && kp.score>0.3){
+                    ctx.beginPath();
+                    ctx.arc(kp.x, kp.y, 5, 0, 2*Math.PI);
+                    ctx.fillStyle = "#00ffcc";
+                    ctx.fill();
+                    ctx.strokeStyle = "#ffffff";
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                }
+            }
+            // draw skeleton (simplified)
+            const connections = [[5,6],[5,7],[7,9],[6,8],[8,10],[11,12],[11,13],[13,15],[12,14],[14,16]];
+            for(let [i1,i2] of connections){
+                const p1=keypoints.find(k=>k.name===`${i1}`); const p2=keypoints.find(k=>k.name===`${i2}`);
+                if(p1 && p2 && p1.score>0.3 && p2.score>0.3){
+                    ctx.beginPath(); ctx.moveTo(p1.x,p1.y); ctx.lineTo(p2.x,p2.y); ctx.strokeStyle="#00ffcc"; ctx.lineWidth=2; ctx.stroke();
+                }
+            }
+        }
+        function analyzePosture(keypoints){
+            const leftShoulder = keypoints.find(k=>k.name==="left_shoulder");
+            const rightShoulder = keypoints.find(k=>k.name==="right_shoulder");
+            const leftHip = keypoints.find(k=>k.name==="left_hip");
+            const rightHip = keypoints.find(k=>k.name==="right_hip");
+            const nose = keypoints.find(k=>k.name==="nose");
+            if(!leftShoulder || !rightShoulder || !leftHip || !rightHip || !nose) return;
+            let feedback = [];
+            // shoulder level
+            let shoulderDiff = Math.abs(leftShoulder.y - rightShoulder.y);
+            if(shoulderDiff > 15) feedback.push(`⚠️ Shoulders uneven (${Math.round(shoulderDiff)}px difference).`);
+            else feedback.push("✅ Shoulders level.");
+            // forward head (nose ahead of shoulders)
+            let avgShoulderY = (leftShoulder.y+rightShoulder.y)/2;
+            if(nose.y < avgShoulderY - 30) feedback.push("📱 Possible forward head posture (chin protruding).");
+            // hip symmetry
+            let hipDiff = Math.abs(leftHip.y - rightHip.y);
+            if(hipDiff > 15) feedback.push(`⚠️ Hips uneven (${Math.round(hipDiff)}px).`);
+            else feedback.push("✅ Hips level.");
+            if(feedback.length===0) feedback.push("👍 Good posture detected.");
+            document.getElementById("postureFeedback").innerHTML = feedback.join("<br>");
+            // store last analysis for capture
+            window.lastPostureAnalysis = feedback.join("; ");
+        }
+        document.getElementById("startCameraBtn").addEventListener("click",()=>{ initCamera(); });
+        document.getElementById("capturePostureBtn").addEventListener("click",()=>{
+            if(!postureVideo || !postureVideo.srcObject){
+                showToast("Start camera first","error");
+                return;
+            }
+            let patientName = document.getElementById("posturePatientName").value.trim() || "Anonymous";
+            let analysis = window.lastPostureAnalysis || "No posture data captured.";
+            let timestamp = new Date().toLocaleString();
+            let report = `PATIENT: ${patientName}\nDATE: ${timestamp}\nPOSTURE ANALYSIS:\n${analysis}\n\nNote: This is an AI-based visual assessment. Combine with clinical reasoning.`;
+            document.getElementById("postureReport").innerHTML = report.replace(/\n/g,"<br>");
+            // also save to vault
+            addReport(patientName, "Posture Analysis", report);
+            // optionally send to WhatsApp
+            window.lastPostureReport = report;
+        });
+        document.getElementById("sendPostureWhatsAppBtn").addEventListener("click",()=>{
+            if(!window.lastPostureReport){ showToast("Capture a posture analysis first","error"); return; }
+            let msg = encodeURIComponent(window.lastPostureReport);
+            window.open(`https://wa.me/2349061832609?text=${msg}`,"_blank");
+        });
+        document.getElementById("savePostureReportBtn").addEventListener("click",()=>{
+            if(!window.lastPostureReport){ showToast("No report to save","error"); return; }
+            let blob = new Blob([window.lastPostureReport], {type:"text/plain"});
+            let a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="posture_report.txt"; a.click();
+        });
+
+        // default tab
+        symptomTab.click();
+        loadReports();
+        // set default neck selection for symptom scanners
+        setTimeout(()=>{
+            let nb = document.querySelector(".basic-region-btn[data-region='neck']");
+            if(nb) nb.click();
+            let ns = document.querySelector(".spec-region-btn[data-spec-region='neck']");
+            if(ns) ns.click();
+        },500);
     </script>
 </body>
 </html>
