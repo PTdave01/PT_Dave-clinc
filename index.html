@@ -3,176 +3,321 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>PT_Dave Physio AI | Free + Specialist (₦10k)</title>
+    <title>PT_Dave Physio AI | Full Body Scanner</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <script src="https://js.paystack.co/v1/inline.js"></script>
     <style>
+        .scanner-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            visibility: hidden;
+            opacity: 0;
+            transition: visibility 0s, opacity 0.3s;
+        }
+        .scanner-overlay.active {
+            visibility: visible;
+            opacity: 1;
+        }
+        .scanner-card {
+            background: #1e1e2f;
+            border-radius: 24px;
+            padding: 2rem;
+            width: 280px;
+            text-align: center;
+        }
+        .scan-line-anim {
+            width: 100%;
+            height: 4px;
+            background: cyan;
+            margin: 20px 0;
+            animation: scanMove 1.2s ease-in-out infinite;
+            border-radius: 2px;
+        }
+        @keyframes scanMove {
+            0% { transform: translateX(-100%); opacity: 0; }
+            50% { transform: translateX(0); opacity: 1; }
+            100% { transform: translateX(100%); opacity: 0; }
+        }
         .toast { transition: opacity 0.3s; }
+        .vault-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            visibility: hidden;
+        }
+        .vault-modal.active {
+            visibility: visible;
+        }
+        .region-btn, .spec-region-btn {
+            transition: all 0.1s ease;
+        }
     </style>
 </head>
-<body class="bg-gradient-to-br from-slate-50 to-indigo-50 font-sans">
+<body class="bg-gradient-to-br from-slate-100 to-indigo-100 font-sans">
 
-    <div class="max-w-6xl mx-auto px-4 py-6">
-        <!-- Header -->
-        <div class="text-center mb-8">
-            <h1 class="text-4xl font-extrabold text-indigo-800 inline-flex items-center gap-3">
-                <i class="fas fa-x-ray"></i> PT_Dave Physio AI
-            </h1>
-            <p class="text-gray-600 mt-1">AI‑assisted musculoskeletal triage • Free & Specialist scans</p>
-            <div class="mt-2 text-sm text-indigo-600 bg-white/60 inline-block px-4 py-1 rounded-full shadow-sm">
-                <i class="fas fa-robot"></i> Basic: free • Specialist: ₦10,000 (includes WhatsApp report to PT_Dave)
+    <div class="max-w-6xl mx-auto px-4 py-5">
+        <!-- Clean Header with Vault Icon -->
+        <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-3">
+            <div class="flex items-center gap-3">
+                <i class="fas fa-stethoscope text-3xl text-indigo-700"></i>
+                <h1 class="text-2xl font-bold text-indigo-800">PT_Dave Physio AI</h1>
+            </div>
+            <div class="flex gap-2 items-center">
+                <span class="bg-white/70 rounded-full px-3 py-1 text-sm shadow-sm"><i class="fas fa-laptop-medical"></i> Free</span>
+                <span class="bg-amber-100 rounded-full px-3 py-1 text-sm shadow-sm"><i class="fas fa-crown"></i> Specialist ₦10k</span>
+                <button id="vaultLockBtn" class="bg-gray-700 hover:bg-gray-800 text-white rounded-full px-3 py-1 text-sm shadow-sm"><i class="fas fa-lock"></i> Vault</button>
             </div>
         </div>
 
-        <div id="toast" class="fixed top-4 right-4 z-50 bg-gray-800 text-white px-4 py-2 rounded-lg shadow-lg text-sm hidden transition-all"></div>
+        <!-- Toast -->
+        <div id="toast" class="fixed top-4 right-4 z-50 bg-gray-800 text-white px-4 py-2 rounded-lg shadow-lg text-sm hidden"></div>
 
-        <!-- ======================= BASIC SCANNER ======================= -->
-        <div class="bg-white rounded-2xl shadow-lg border border-indigo-100 mb-10 overflow-hidden">
-            <div class="bg-indigo-600 px-6 py-3 text-white flex justify-between items-center">
-                <span class="font-semibold"><i class="fas fa-heartbeat"></i> 🔓 BASIC FREE SCANNER</span>
-                <i class="fas fa-microchip text-indigo-200"></i>
+        <!-- Scanner Modal Animation -->
+        <div id="scannerModal" class="scanner-overlay">
+            <div class="scanner-card">
+                <i class="fas fa-microchip text-4xl text-cyan-400 mb-2"></i>
+                <p class="text-white font-mono text-lg">AI SCANNING</p>
+                <div class="scan-line-anim"></div>
+                <p class="text-gray-300 text-sm mt-2" id="scanningMessage">Analyzing...</p>
             </div>
-            <div class="p-6">
-                <div class="grid md:grid-cols-2 gap-6">
+        </div>
+
+        <!-- ========= BASIC FREE SCANNER (All Regions) ========= -->
+        <div class="bg-white rounded-2xl shadow-md border border-indigo-100 mb-8 overflow-hidden">
+            <div class="bg-indigo-600 px-5 py-2 text-white flex justify-between items-center">
+                <span class="font-semibold"><i class="fas fa-heartbeat mr-2"></i>Free Scan - Full Body</span>
+                <i class="fas fa-robot text-indigo-200"></i>
+            </div>
+            <div class="p-5">
+                <div class="grid md:grid-cols-2 gap-5">
                     <div>
-                        <label class="block font-semibold text-gray-700 mb-1"><i class="fas fa-user"></i> Patient name (optional)</label>
-                        <input type="text" id="basicPatientName" placeholder="e.g., John Doe" class="w-full border rounded-xl px-4 py-2 mb-3">
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Patient name</label>
+                        <input type="text" id="basicPatientName" placeholder="e.g., John" class="w-full border rounded-xl px-3 py-2 mb-3 text-sm">
 
-                        <label class="block font-semibold text-gray-700 mb-1"><i class="fas fa-map-marker-alt"></i> 1. Body region</label>
-                        <div class="grid grid-cols-2 gap-2 mb-3">
-                            <button data-region="neck" class="basic-region-btn py-2 rounded-xl border-2 border-gray-200 bg-gray-50 hover:bg-indigo-50">Neck</button>
-                            <button data-region="shoulder" class="basic-region-btn py-2 rounded-xl border-2 border-gray-200 bg-gray-50 hover:bg-indigo-50">Shoulder</button>
-                            <button data-region="lowerback" class="basic-region-btn py-2 rounded-xl border-2 border-gray-200 bg-gray-50 hover:bg-indigo-50">Lower back</button>
-                            <button data-region="knee" class="basic-region-btn py-2 rounded-xl border-2 border-gray-200 bg-gray-50 hover:bg-indigo-50">Knee</button>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Body region</label>
+                        <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-3">
+                            <button data-region="neck" class="basic-region-btn py-1.5 rounded-lg border text-sm">Neck</button>
+                            <button data-region="shoulder" class="basic-region-btn py-1.5 rounded-lg border text-sm">Shoulder</button>
+                            <button data-region="upperback" class="basic-region-btn py-1.5 rounded-lg border text-sm">Upper back</button>
+                            <button data-region="lowerback" class="basic-region-btn py-1.5 rounded-lg border text-sm">Lower back</button>
+                            <button data-region="hip" class="basic-region-btn py-1.5 rounded-lg border text-sm">Hip</button>
+                            <button data-region="knee" class="basic-region-btn py-1.5 rounded-lg border text-sm">Knee</button>
+                            <button data-region="ankle" class="basic-region-btn py-1.5 rounded-lg border text-sm">Ankle</button>
+                            <button data-region="foot" class="basic-region-btn py-1.5 rounded-lg border text-sm">Foot</button>
+                            <button data-region="elbow" class="basic-region-btn py-1.5 rounded-lg border text-sm">Elbow</button>
+                            <button data-region="wrist" class="basic-region-btn py-1.5 rounded-lg border text-sm">Wrist/Hand</button>
                         </div>
 
-                        <label class="block font-semibold text-gray-700 mb-1"><i class="fas fa-symptoms"></i> 2. Symptoms</label>
-                        <div id="basicSymptomsContainer" class="flex flex-wrap gap-2 min-h-[90px] bg-gray-50 p-3 rounded-xl border border-dashed mb-3">
-                            <span class="text-gray-400 text-sm">Select a region first</span>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Symptoms</label>
+                        <div id="basicSymptomsContainer" class="flex flex-wrap gap-1.5 min-h-[80px] bg-gray-50 p-2 rounded-lg border text-sm mb-3">
+                            <span class="text-gray-400 text-xs">Select region first</span>
                         </div>
 
-                        <label class="block font-semibold text-gray-700 mb-1"><i class="fas fa-chart-line"></i> 3. Outcome measures</label>
-                        <div class="space-y-1 mb-3">
-                            <div>Pain (0‑10): <input type="range" id="basicPain" min="0" max="10" value="3" class="w-40"> <span id="basicPainVal">3</span></div>
-                            <div>Function (0‑10): <input type="range" id="basicFunc" min="0" max="10" value="6" class="w-40"> <span id="basicFuncVal">6</span></div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Outcome</label>
+                        <div class="flex gap-4 text-sm">
+                            <div>Pain: <input type="range" id="basicPain" min="0" max="10" value="3" class="w-24"> <span id="basicPainVal">3</span></div>
+                            <div>Function: <input type="range" id="basicFunc" min="0" max="10" value="6" class="w-24"> <span id="basicFuncVal">6</span></div>
                         </div>
 
-                        <button id="basicScanBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-6 rounded-full shadow transition flex items-center gap-2"><i class="fas fa-stethoscope"></i> Run Free Scan</button>
+                        <button id="basicScanBtn" class="mt-4 w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 rounded-full shadow flex items-center justify-center gap-2"><i class="fas fa-stethoscope"></i> Run Free Scan</button>
                     </div>
 
-                    <div class="bg-gray-50 rounded-xl p-4 border">
-                        <h3 class="font-bold text-gray-800 flex items-center gap-2"><i class="fas fa-notes-medical"></i> Basic Report</h3>
-                        <div id="basicResult" class="text-sm text-gray-700 mt-2 whitespace-pre-line max-h-80 overflow-auto">⚡ Ready</div>
-                        <div class="mt-3 flex gap-2">
-                            <button id="saveBasicReportBtn" class="text-xs bg-white border rounded-full px-3 py-1 hover:bg-indigo-50"><i class="fas fa-save"></i> Save .txt</button>
-                            <button id="copyBasicBtn" class="text-xs bg-white border rounded-full px-3 py-1 hover:bg-indigo-50"><i class="fas fa-copy"></i> Copy</button>
+                    <div class="bg-gray-50 rounded-xl p-3 border">
+                        <h3 class="font-bold text-gray-800 text-sm flex items-center gap-1"><i class="fas fa-notes-medical"></i> Report</h3>
+                        <div id="basicResult" class="text-xs text-gray-700 mt-1 whitespace-pre-line max-h-64 overflow-auto">⚡ Ready</div>
+                        <div class="mt-2 flex gap-2">
+                            <button id="saveBasicReportBtn" class="text-xs bg-white border rounded-full px-2 py-1"><i class="fas fa-save"></i> Save</button>
+                            <button id="copyBasicBtn" class="text-xs bg-white border rounded-full px-2 py-1"><i class="fas fa-copy"></i> Copy</button>
                         </div>
                     </div>
                 </div>
-                <div id="basicExerciseBox" class="mt-4 p-3 bg-green-50 rounded-xl border border-green-200 hidden">
-                    <i class="fas fa-dumbbell text-green-700"></i> <strong>Exercise prescription:</strong> <span id="basicExerciseText"></span>
+                <div id="basicExerciseBox" class="mt-3 p-2 bg-green-50 rounded-lg text-xs border hidden">
+                    <i class="fas fa-dumbbell"></i> <strong>Exercise:</strong> <span id="basicExerciseText"></span>
                 </div>
             </div>
         </div>
 
-        <!-- ======================= SPECIALIST SCANNER (Paystack ₦10,000) ======================= -->
-        <div class="bg-white rounded-2xl shadow-lg border border-amber-200 overflow-hidden">
-            <div class="bg-amber-600 px-6 py-3 text-white flex justify-between items-center">
-                <span class="font-semibold"><i class="fas fa-crown"></i> 👑 SPECIALIST SCAN — ₦10,000</span>
-                <i class="fab fa-whatsapp text-white"></i>
+        <!-- ========= SPECIALIST SCANNER (All Regions) ========= -->
+        <div class="bg-white rounded-2xl shadow-md border border-amber-200 overflow-hidden">
+            <div class="bg-amber-600 px-5 py-2 text-white flex justify-between items-center">
+                <span class="font-semibold"><i class="fas fa-crown mr-2"></i>Specialist · ₦10,000 (All Body Regions)</span>
+                <i class="fab fa-whatsapp"></i>
             </div>
-            <div class="p-6">
-                <div class="grid md:grid-cols-2 gap-6">
+            <div class="p-5">
+                <div class="grid md:grid-cols-2 gap-5">
                     <div>
-                        <label class="block font-semibold text-gray-700 mb-1"><i class="fas fa-user"></i> Patient full name *</label>
-                        <input type="text" id="specialistPatientName" placeholder="Required" class="w-full border rounded-xl px-4 py-2 mb-3">
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Full name *</label>
+                        <input type="text" id="specialistPatientName" placeholder="Required" class="w-full border rounded-xl px-3 py-2 mb-3 text-sm">
 
-                        <label class="block font-semibold text-gray-700 mb-1"><i class="fas fa-phone-alt"></i> Patient WhatsApp (for copy) *</label>
-                        <input type="tel" id="specialistPatientPhone" placeholder="e.g., 2348123456789" class="w-full border rounded-xl px-4 py-2 mb-3">
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">WhatsApp (for copy)</label>
+                        <input type="tel" id="specialistPatientPhone" placeholder="2348123456789" class="w-full border rounded-xl px-3 py-2 mb-3 text-sm">
 
-                        <label class="block font-semibold text-gray-700 mb-1"><i class="fas fa-map-marker-alt"></i> Body region</label>
-                        <div class="grid grid-cols-2 gap-2 mb-3">
-                            <button data-spec-region="neck" class="spec-region-btn py-2 rounded-xl border-2 border-gray-200 bg-gray-50 hover:bg-amber-50">Neck</button>
-                            <button data-spec-region="shoulder" class="spec-region-btn py-2 rounded-xl border-2 border-gray-200 bg-gray-50 hover:bg-amber-50">Shoulder</button>
-                            <button data-spec-region="lowerback" class="spec-region-btn py-2 rounded-xl border-2 border-gray-200 bg-gray-50 hover:bg-amber-50">Lower back</button>
-                            <button data-spec-region="knee" class="spec-region-btn py-2 rounded-xl border-2 border-gray-200 bg-gray-50 hover:bg-amber-50">Knee</button>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Body region</label>
+                        <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-3">
+                            <button data-spec-region="neck" class="spec-region-btn py-1.5 rounded-lg border text-sm">Neck</button>
+                            <button data-spec-region="shoulder" class="spec-region-btn py-1.5 rounded-lg border text-sm">Shoulder</button>
+                            <button data-spec-region="upperback" class="spec-region-btn py-1.5 rounded-lg border text-sm">Upper back</button>
+                            <button data-spec-region="lowerback" class="spec-region-btn py-1.5 rounded-lg border text-sm">Lower back</button>
+                            <button data-spec-region="hip" class="spec-region-btn py-1.5 rounded-lg border text-sm">Hip</button>
+                            <button data-spec-region="knee" class="spec-region-btn py-1.5 rounded-lg border text-sm">Knee</button>
+                            <button data-spec-region="ankle" class="spec-region-btn py-1.5 rounded-lg border text-sm">Ankle</button>
+                            <button data-spec-region="foot" class="spec-region-btn py-1.5 rounded-lg border text-sm">Foot</button>
+                            <button data-spec-region="elbow" class="spec-region-btn py-1.5 rounded-lg border text-sm">Elbow</button>
+                            <button data-spec-region="wrist" class="spec-region-btn py-1.5 rounded-lg border text-sm">Wrist/Hand</button>
                         </div>
 
-                        <label class="block font-semibold text-gray-700 mb-1">Symptoms</label>
-                        <div id="specialistSymptomsContainer" class="flex flex-wrap gap-2 min-h-[90px] bg-gray-50 p-3 rounded-xl border border-dashed mb-3">
-                            <span class="text-gray-400 text-sm">Select region first</span>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Symptoms</label>
+                        <div id="specialistSymptomsContainer" class="flex flex-wrap gap-1.5 min-h-[80px] bg-gray-50 p-2 rounded-lg border text-sm mb-3">
+                            <span class="text-gray-400 text-xs">Select region first</span>
                         </div>
 
-                        <label class="block font-semibold text-gray-700 mb-1">Outcome measures</label>
-                        <div class="space-y-1 mb-3">
-                            <div>Pain (0‑10): <input type="range" id="specPain" min="0" max="10" value="4" class="w-40"> <span id="specPainVal">4</span></div>
-                            <div>Function (0‑10): <input type="range" id="specFunc" min="0" max="10" value="5" class="w-40"> <span id="specFuncVal">5</span></div>
+                        <div class="flex gap-4 text-sm">
+                            <div>Pain: <input type="range" id="specPain" min="0" max="10" value="4" class="w-24"> <span id="specPainVal">4</span></div>
+                            <div>Function: <input type="range" id="specFunc" min="0" max="10" value="5" class="w-24"> <span id="specFuncVal">5</span></div>
                         </div>
 
-                        <button id="paystackPayBtn" class="bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 px-6 rounded-full shadow transition flex items-center gap-2 w-full justify-center">
-                            <i class="fab fa-paystack"></i> Pay ₦10,000 & Run Specialist Scan
-                        </button>
-                        <p class="text-xs text-gray-500 mt-2"><i class="fab fa-whatsapp"></i> After payment, report is sent to PT_Dave's WhatsApp + auto‑displayed here.</p>
+                        <button id="paystackPayBtn" class="mt-4 w-full bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 rounded-full shadow flex items-center justify-center gap-2"><i class="fab fa-paystack"></i> Pay ₦10k & Scan</button>
                     </div>
 
-                    <div class="bg-gray-50 rounded-xl p-4 border">
-                        <h3 class="font-bold text-gray-800 flex items-center gap-2"><i class="fas fa-file-prescription"></i> Specialist Report</h3>
-                        <div id="specialistResult" class="text-sm text-gray-700 mt-2 whitespace-pre-line max-h-80 overflow-auto">🔒 Unlock with ₦10,000 payment</div>
-                        <div class="mt-3 flex gap-2">
-                            <button id="copySpecialistBtn" class="text-xs bg-white border rounded-full px-3 py-1 hover:bg-amber-50"><i class="fas fa-copy"></i> Copy report</button>
-                            <a id="whatsappContactBtn" href="#" target="_blank" class="text-xs bg-green-100 border border-green-300 rounded-full px-3 py-1 hover:bg-green-200 inline-flex items-center gap-1"><i class="fab fa-whatsapp"></i> Contact PT_Dave</a>
+                    <div class="bg-gray-50 rounded-xl p-3 border">
+                        <h3 class="font-bold text-gray-800 text-sm"><i class="fas fa-file-prescription"></i> Specialist Report</h3>
+                        <div id="specialistResult" class="text-xs text-gray-700 mt-1 whitespace-pre-line max-h-64 overflow-auto">🔒 Unlock with payment</div>
+                        <div class="mt-2 flex gap-2">
+                            <button id="copySpecialistBtn" class="text-xs bg-white border rounded-full px-2 py-1"><i class="fas fa-copy"></i> Copy</button>
+                            <a id="whatsappContactBtn" href="#" target="_blank" class="text-xs bg-green-100 border rounded-full px-2 py-1"><i class="fab fa-whatsapp"></i> Contact PT</a>
                         </div>
                     </div>
                 </div>
-                <div id="specialistExerciseBox" class="mt-4 p-3 bg-green-50 rounded-xl border border-green-200 hidden">
-                    <i class="fas fa-dumbbell"></i> <strong>Specialist exercise plan:</strong> <span id="specialistExerciseText"></span>
+                <div id="specialistExerciseBox" class="mt-3 p-2 bg-green-50 rounded-lg text-xs border hidden">
+                    <i class="fas fa-dumbbell"></i> <strong>Exercise:</strong> <span id="specialistExerciseText"></span>
                 </div>
             </div>
         </div>
 
-        <div class="text-center text-xs text-gray-400 mt-8 border-t pt-4">
-            <i class="fas fa-shield-alt"></i> AI suggestions are for clinical support only. Always combine with physical examination.
+        <div class="text-center text-xs text-gray-400 mt-6 pt-2 border-t">AI suggestions are clinical support only. All regions covered.</div>
+    </div>
+
+    <!-- VAULT MODAL -->
+    <div id="vaultModal" class="vault-modal">
+        <div class="bg-white rounded-2xl shadow-2xl w-11/12 max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+            <div class="bg-indigo-800 text-white px-5 py-3 flex justify-between items-center">
+                <span><i class="fas fa-archive mr-2"></i> Therapist Vault - All Reports</span>
+                <button id="closeVaultBtn" class="text-white hover:text-gray-200"><i class="fas fa-times"></i></button>
+            </div>
+            <div id="vaultContent" class="p-4 overflow-auto flex-1"></div>
+            <div class="bg-gray-100 px-5 py-3 flex justify-end gap-2">
+                <button id="exportVaultBtn" class="bg-green-600 text-white px-3 py-1 rounded-full text-sm hidden"><i class="fas fa-download"></i> Export All</button>
+                <button id="clearVaultBtn" class="bg-red-600 text-white px-3 py-1 rounded-full text-sm hidden"><i class="fas fa-trash-alt"></i> Clear All</button>
+            </div>
         </div>
     </div>
 
     <script>
-        // ---------- Knowledge base ----------
+        // ========= FULL BODY SYMPTOM MAP =========
         const symptomMap = {
             neck: ["Stiffness & reduced rotation", "Radiating pain to shoulder/arm", "Headaches at base of skull", "Sharp pain with extension", "Tingling in fingers"],
             shoulder: ["Pain lifting arm sideways", "Night pain on side", "Clicking / popping", "Loss of external rotation", "Weakness overhead"],
+            upperback: ["Mid-back pain with sitting", "Stiffness between shoulder blades", "Pain with deep breathing", "Radiating pain around ribs", "Muscle knots"],
             lowerback: ["Dull ache after sitting", "Sharp pain bending forward", "Pain radiating to buttock/leg", "Morning stiffness >30min", "Muscle spasm"],
-            knee: ["Pain stairs up/down", "Swelling around kneecap", "Locking/catching", "Instability/giving way", "Pain deep squatting"]
+            hip: ["Deep groin pain", "Pain walking or climbing stairs", "Clicking or catching in hip", "Pain lying on side at night", "Stiffness after sitting"],
+            knee: ["Pain stairs up/down", "Swelling around kneecap", "Locking/catching", "Instability/giving way", "Pain deep squatting"],
+            ankle: ["Pain with walking or running", "Swelling around lateral ankle", "Instability after sprain", "Pain with pointing foot", "Stiffness in morning"],
+            foot: ["Heel pain first steps in morning", "Arch pain after standing", "Pain with toe walking", "Numbness in toes", "Pain on ball of foot"],
+            elbow: ["Pain on outside of elbow (tennis elbow)", "Pain on inside (golfer's elbow)", "Locking or clicking", "Pain with gripping", "Stiffness after rest"],
+            wrist: ["Pain with gripping or twisting", "Numbness in thumb/index fingers", "Snapping sensation", "Weakness lifting objects", "Swelling over back of wrist"]
         };
 
+        // Diagnostic logic for each region
         function aiDiagnose(region, symptoms, painScore, functionScore, isSpecialist = false) {
             if (!region || symptoms.length === 0) return "⚠️ Select region and at least one symptom.";
             let conditions = [], advice = "";
-            if (region === "neck") {
-                if (symptoms.some(s => s.includes("Radiating") || s.includes("Tingling"))) conditions.push("Cervical radiculopathy");
-                if (symptoms.some(s => s.includes("Headaches"))) conditions.push("Cervicogenic headache");
-                if (conditions.length === 0) conditions.push("Mechanical neck pain");
-                advice = "Upper cervical mobs, posture correction, neural dynamics.";
-            } else if (region === "shoulder") {
-                if (symptoms.some(s => s.includes("Pain lifting"))) conditions.push("Rotator cuff tendinopathy");
-                if (symptoms.some(s => s.includes("Night pain"))) conditions.push("Subacromial pain syndrome");
-                if (conditions.length === 0) conditions.push("Shoulder impingement");
-                advice = "Isometric loading, glenohumeral mobs, rotator cuff strengthening.";
-            } else if (region === "lowerback") {
-                if (symptoms.some(s => s.includes("radiating"))) conditions.push("Lumbar radiculopathy");
-                if (symptoms.some(s => s.includes("Morning stiffness"))) conditions.push("Inflammatory pattern");
-                if (conditions.length === 0) conditions.push("Mechanical LBP");
-                advice = "Extension-based preferences, core stability, avoid prolonged flexion.";
-            } else if (region === "knee") {
-                if (symptoms.some(s => s.includes("stairs"))) conditions.push("Patellofemoral pain");
-                if (symptoms.some(s => s.includes("Locking"))) conditions.push("Possible meniscal tear");
-                if (conditions.length === 0) conditions.push("Patellar tendinopathy / early OA");
-                advice = "VMO strengthening, glute med work, step-down retraining.";
+
+            switch(region) {
+                case "neck":
+                    if (symptoms.some(s => s.includes("Radiating") || s.includes("Tingling"))) conditions.push("Cervical radiculopathy");
+                    if (symptoms.some(s => s.includes("Headaches"))) conditions.push("Cervicogenic headache");
+                    if (conditions.length === 0) conditions.push("Mechanical neck pain");
+                    advice = "Upper cervical mobs, posture correction, neural dynamics.";
+                    break;
+                case "shoulder":
+                    if (symptoms.some(s => s.includes("Pain lifting"))) conditions.push("Rotator cuff tendinopathy");
+                    if (symptoms.some(s => s.includes("Night pain"))) conditions.push("Subacromial pain syndrome");
+                    if (conditions.length === 0) conditions.push("Shoulder impingement");
+                    advice = "Isometric loading, glenohumeral mobs, rotator cuff strengthening.";
+                    break;
+                case "upperback":
+                    if (symptoms.some(s => s.includes("Radiating"))) conditions.push("Thoracic radiculopathy");
+                    if (symptoms.some(s => s.includes("Stiffness"))) conditions.push("Thoracic facet joint dysfunction");
+                    if (conditions.length === 0) conditions.push("Postural thoracic pain");
+                    advice = "Thoracic extension mobs, scapular retractions, breathing exercises.";
+                    break;
+                case "lowerback":
+                    if (symptoms.some(s => s.includes("radiating"))) conditions.push("Lumbar radiculopathy");
+                    if (symptoms.some(s => s.includes("Morning stiffness"))) conditions.push("Inflammatory pattern");
+                    if (conditions.length === 0) conditions.push("Mechanical LBP");
+                    advice = "Extension-based preferences, core stability, avoid prolonged flexion.";
+                    break;
+                case "hip":
+                    if (symptoms.some(s => s.includes("groin"))) conditions.push("Hip OA / femoroacetabular impingement");
+                    if (symptoms.some(s => s.includes("clicking"))) conditions.push("Snapping hip syndrome");
+                    if (conditions.length === 0) conditions.push("Gluteal tendinopathy");
+                    advice = "Hip flexor stretch, glute strengthening, load management.";
+                    break;
+                case "knee":
+                    if (symptoms.some(s => s.includes("stairs"))) conditions.push("Patellofemoral pain");
+                    if (symptoms.some(s => s.includes("Locking"))) conditions.push("Possible meniscal tear");
+                    if (conditions.length === 0) conditions.push("Patellar tendinopathy / early OA");
+                    advice = "VMO strengthening, glute med work, step-down retraining.";
+                    break;
+                case "ankle":
+                    if (symptoms.some(s => s.includes("instability"))) conditions.push("Chronic ankle instability");
+                    if (symptoms.some(s => s.includes("swelling"))) conditions.push("Lateral ankle sprain");
+                    if (conditions.length === 0) conditions.push("Ankle impingement or tendinopathy");
+                    advice = "Proprioception training, calf raises, peroneal strengthening.";
+                    break;
+                case "foot":
+                    if (symptoms.some(s => s.includes("Heel pain"))) conditions.push("Plantar fasciopathy");
+                    if (symptoms.some(s => s.includes("Arch pain"))) conditions.push("Posterior tibial tendon dysfunction");
+                    if (conditions.length === 0) conditions.push("Metatarsalgia or forefoot pain");
+                    advice = "Calf stretching, arch supports, toe yoga, gradual loading.";
+                    break;
+                case "elbow":
+                    if (symptoms.some(s => s.includes("outside"))) conditions.push("Lateral epicondylalgia (tennis elbow)");
+                    if (symptoms.some(s => s.includes("inside"))) conditions.push("Medial epicondylalgia (golfer's elbow)");
+                    if (conditions.length === 0) conditions.push("Olecranon bursitis or posterior impingement");
+                    advice = "Eccentric wrist exercises, counterforce bracing, grip strength training.";
+                    break;
+                case "wrist":
+                    if (symptoms.some(s => s.includes("Numbness"))) conditions.push("Carpal tunnel syndrome");
+                    if (symptoms.some(s => s.includes("snapping"))) conditions.push("De Quervain's tenosynovitis");
+                    if (conditions.length === 0) conditions.push("Wrist strain or tendinopathy");
+                    advice = "Neural glides, thumb spica splinting, activity modification.";
+                    break;
+                default:
+                    conditions.push("Undefined region");
+                    advice = "Please select a valid body region.";
             }
+
             let severity = (painScore >= 7) ? "High pain" : (painScore >= 4 ? "Moderate" : "Mild");
             let functional = functionScore <= 3 ? "Poor function" : (functionScore <= 6 ? "Moderate" : "Good function");
             let report = `📍 Region: ${region.toUpperCase()}\n📋 Symptoms: ${symptoms.join(", ")}\n📊 Pain: ${painScore}/10 (${severity}) | Function: ${functionScore}/10 (${functional})\n\n🔍 Possible conditions: ${conditions.join("; ")}\n💡 Clinical advice: ${advice}`;
-            if (isSpecialist) report += `\n\n🩺 **Specialist note** – PT_Dave will review this case personally. Expect WhatsApp follow-up within 24h.`;
+            if (isSpecialist) report += `\n\n🩺 Specialist review: PT_Dave will follow up via WhatsApp.`;
             return report;
         }
 
@@ -180,29 +325,140 @@
             const exercises = {
                 neck: "Chin tucks, upper trap stretch, deep neck flexor activation.",
                 shoulder: "Pendulum swings, external rotation isometrics, scapular retractions.",
+                upperback: "Thoracic extension over foam roller, wall angels, prone Y-T-W exercises.",
                 lowerback: "McKenzie press‑ups, bird‑dog, pelvic tilts.",
-                knee: "Straight leg raises, mini squats, terminal knee extensions."
+                hip: "Clamshells, bridges, standing hip flexor stretch, side‑lying leg lifts.",
+                knee: "Straight leg raises, mini squats, terminal knee extensions.",
+                ankle: "Calf raises, wobble board balance, resisted inversion/eversion.",
+                foot: "Towel curls, intrinsic foot muscle exercises, calf stretching.",
+                elbow: "Wrist extensor eccentric (Therabar), grip strengthening, forearm massage.",
+                wrist: "Median nerve glides, thumb stretches, gentle grip exercises."
             };
-            return exercises[region] || "General mobility and strengthening.";
+            return exercises[region] || "General mobility and strengthening for affected area.";
         }
 
+        // Render symptoms checkboxes
         function renderSymptoms(region, containerId, selectedSet = new Set()) {
             const container = document.getElementById(containerId);
             const symptoms = symptomMap[region];
-            if (!symptoms) { container.innerHTML = '<span class="text-gray-400 text-sm">No symptoms for this region</span>'; return; }
+            if (!symptoms) { container.innerHTML = '<span class="text-gray-400 text-xs">Select region first</span>'; return; }
             let html = '';
             symptoms.forEach(sym => {
                 const checked = selectedSet.has(sym) ? 'checked' : '';
-                html += `<label class="inline-flex items-center gap-2 bg-white border rounded-full px-3 py-1.5 text-sm shadow-sm hover:bg-indigo-50 cursor-pointer"><input type="checkbox" value="${escapeHtml(sym)}" class="symptom-checkbox" ${checked}> <span>${escapeHtml(sym)}</span></label>`;
+                html += `<label class="inline-flex items-center gap-1 bg-white border rounded-full px-2 py-0.5 text-xs shadow-sm"><input type="checkbox" value="${escapeHtml(sym)}" class="symptom-checkbox w-3 h-3" ${checked}> <span>${escapeHtml(sym)}</span></label>`;
             });
             container.innerHTML = html;
         }
 
         function escapeHtml(str) { return str.replace(/[&<>]/g, function(m){ if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m;}); }
 
-        // ---------- Basic Scanner ----------
+        // ---------- Vault Management ----------
+        let VAULT_PASSWORD = "PT_Dave2025";
+        let reportsArray = [];
+
+        function loadReportsFromStorage() {
+            const stored = localStorage.getItem("PT_Dave_Reports");
+            if (stored) reportsArray = JSON.parse(stored);
+            else reportsArray = [];
+        }
+
+        function saveReportsToStorage() {
+            localStorage.setItem("PT_Dave_Reports", JSON.stringify(reportsArray));
+        }
+
+        function addReport(patientName, scanType, reportText, extraMeta = {}) {
+            const newReport = {
+                id: Date.now() + Math.random(),
+                patient: patientName || "Anonymous",
+                type: scanType,
+                date: new Date().toLocaleString(),
+                report: reportText,
+                meta: extraMeta
+            };
+            reportsArray.unshift(newReport);
+            saveReportsToStorage();
+            showToast(`Report saved to vault (${scanType})`, "success");
+        }
+
+        function displayVaultReports() {
+            const container = document.getElementById("vaultContent");
+            if (reportsArray.length === 0) {
+                container.innerHTML = '<div class="text-gray-500 text-center p-8">No reports yet. Scans will appear here.</div>';
+                document.getElementById("exportVaultBtn").classList.add("hidden");
+                document.getElementById("clearVaultBtn").classList.add("hidden");
+                return;
+            }
+            let html = `<div class="space-y-3">`;
+            reportsArray.forEach(r => {
+                html += `
+                    <div class="border rounded-lg p-3 bg-gray-50">
+                        <div class="flex justify-between items-start flex-wrap gap-2">
+                            <div><strong>${escapeHtml(r.patient)}</strong> · ${r.type} scan · ${r.date}</div>
+                            <div class="flex gap-2">
+                                <button class="view-report-btn text-xs bg-indigo-100 px-2 py-1 rounded" data-id="${r.id}">View</button>
+                                <button class="delete-report-btn text-xs bg-red-100 px-2 py-1 rounded" data-id="${r.id}">Delete</button>
+                            </div>
+                        </div>
+                        <div class="text-xs text-gray-600 mt-1">${r.report.substring(0, 100)}...</div>
+                    </div>
+                `;
+            });
+            html += `</div>`;
+            container.innerHTML = html;
+            document.getElementById("exportVaultBtn").classList.remove("hidden");
+            document.getElementById("clearVaultBtn").classList.remove("hidden");
+
+            document.querySelectorAll(".view-report-btn").forEach(btn => {
+                btn.addEventListener("click", (e) => {
+                    const id = parseFloat(btn.getAttribute("data-id"));
+                    const report = reportsArray.find(r => r.id === id);
+                    if (report) alert(`Full Report for ${report.patient} (${report.type})\n\n${report.report}`);
+                });
+            });
+            document.querySelectorAll(".delete-report-btn").forEach(btn => {
+                btn.addEventListener("click", (e) => {
+                    const id = parseFloat(btn.getAttribute("data-id"));
+                    reportsArray = reportsArray.filter(r => r.id !== id);
+                    saveReportsToStorage();
+                    displayVaultReports();
+                    showToast("Report deleted", "success");
+                });
+            });
+        }
+
+        function exportAllReports() {
+            const dataStr = JSON.stringify(reportsArray, null, 2);
+            const blob = new Blob([dataStr], {type: "application/json"});
+            const a = document.createElement("a");
+            a.href = URL.createObjectURL(blob);
+            a.download = `PT_Dave_reports_${Date.now()}.json`;
+            a.click();
+            URL.revokeObjectURL(a.href);
+        }
+
+        function clearAllReports() {
+            if (confirm("Delete ALL reports permanently?")) {
+                reportsArray = [];
+                saveReportsToStorage();
+                displayVaultReports();
+                showToast("All reports cleared", "success");
+            }
+        }
+
+        // ---------- Scanner Animation ----------
+        function showScannerAnimation(callback) {
+            const modal = document.getElementById("scannerModal");
+            modal.classList.add("active");
+            setTimeout(() => {
+                modal.classList.remove("active");
+                callback();
+            }, 1800);
+        }
+
+        // ---------- Basic Scan ----------
         let basicSelectedRegion = null;
         let basicSelectedSymptoms = new Set();
+
         function refreshBasicSymptoms() {
             if (basicSelectedRegion) {
                 renderSymptoms(basicSelectedRegion, "basicSymptomsContainer", basicSelectedSymptoms);
@@ -213,53 +469,46 @@
                     });
                 });
             } else {
-                document.getElementById("basicSymptomsContainer").innerHTML = '<span class="text-gray-400 text-sm">Select a region first</span>';
+                document.getElementById("basicSymptomsContainer").innerHTML = '<span class="text-gray-400 text-xs">Select region first</span>';
             }
         }
+
         document.querySelectorAll(".basic-region-btn").forEach(btn => {
             btn.addEventListener("click", () => {
                 basicSelectedRegion = btn.getAttribute("data-region");
-                document.querySelectorAll(".basic-region-btn").forEach(b => b.classList.remove("border-indigo-500", "bg-indigo-100"));
-                btn.classList.add("border-indigo-500", "bg-indigo-100");
+                document.querySelectorAll(".basic-region-btn").forEach(b => b.classList.remove("bg-indigo-100", "border-indigo-500"));
+                btn.classList.add("bg-indigo-100", "border-indigo-500");
                 basicSelectedSymptoms.clear();
                 refreshBasicSymptoms();
-                document.getElementById("basicResult").innerHTML = "🔄 Region changed. Select symptoms and run scan.";
+                document.getElementById("basicResult").innerHTML = "⚡ Ready";
             });
         });
+
         document.getElementById("basicScanBtn").addEventListener("click", () => {
-            if (!basicSelectedRegion) { showToast("Select a body region first", "error"); return; }
+            if (!basicSelectedRegion) { showToast("Select body region", "error"); return; }
             if (basicSelectedSymptoms.size === 0) { showToast("Select at least one symptom", "error"); return; }
             const pain = parseInt(document.getElementById("basicPain").value);
             const func = parseInt(document.getElementById("basicFunc").value);
-            const name = document.getElementById("basicPatientName").value.trim() || "Anonymous";
-            const report = aiDiagnose(basicSelectedRegion, Array.from(basicSelectedSymptoms), pain, func, false);
-            const exercise = getExercisePrescription(basicSelectedRegion);
-            document.getElementById("basicResult").innerHTML = `🧑‍⚕️ Patient: ${name}\n\n${report}`;
-            document.getElementById("basicExerciseText").innerText = exercise;
-            document.getElementById("basicExerciseBox").classList.remove("hidden");
-            showToast("Basic scan completed", "success");
-        });
-        document.getElementById("saveBasicReportBtn").addEventListener("click", () => {
-            const content = document.getElementById("basicResult").innerText;
-            if (!content || content === "⚡ Ready") { showToast("No report to save", "error"); return; }
-            const blob = new Blob([content], {type: "text/plain"});
-            const a = document.createElement("a");
-            a.href = URL.createObjectURL(blob);
-            a.download = `PT_Dave_basic_report_${Date.now()}.txt`;
-            a.click();
-            URL.revokeObjectURL(a.href);
-        });
-        document.getElementById("copyBasicBtn").addEventListener("click", () => {
-            const text = document.getElementById("basicResult").innerText;
-            if (!text || text === "⚡ Ready") { showToast("Nothing to copy", "error"); return; }
-            navigator.clipboard.writeText(text);
-            showToast("Copied to clipboard", "success");
+            const patientName = document.getElementById("basicPatientName").value.trim() || "Anonymous";
+            
+            showScannerAnimation(() => {
+                const report = aiDiagnose(basicSelectedRegion, Array.from(basicSelectedSymptoms), pain, func, false);
+                const exercise = getExercisePrescription(basicSelectedRegion);
+                const fullReport = `PATIENT: ${patientName}\n\n${report}\n\n🏋️ EXERCISE: ${exercise}`;
+                document.getElementById("basicResult").innerHTML = fullReport.replace(/\n/g, "<br>");
+                document.getElementById("basicExerciseText").innerText = exercise;
+                document.getElementById("basicExerciseBox").classList.remove("hidden");
+                
+                addReport(patientName, "Basic", fullReport);
+                const whatsappMsg = encodeURIComponent(fullReport);
+                window.open(`https://wa.me/2349061832609?text=${whatsappMsg}`, "_blank");
+                showToast("Basic scan done. Report sent to PT_Dave on WhatsApp", "success");
+            });
         });
 
-        // ---------- Specialist Scanner with live Paystack key ----------
+        // ---------- Specialist Scan ----------
         let specSelectedRegion = null;
         let specSelectedSymptoms = new Set();
-        let lastSpecialistReport = "";
 
         function refreshSpecialistSymptoms() {
             if (specSelectedRegion) {
@@ -271,26 +520,26 @@
                     });
                 });
             } else {
-                document.getElementById("specialistSymptomsContainer").innerHTML = '<span class="text-gray-400 text-sm">Select region first</span>';
+                document.getElementById("specialistSymptomsContainer").innerHTML = '<span class="text-gray-400 text-xs">Select region first</span>';
             }
         }
+
         document.querySelectorAll(".spec-region-btn").forEach(btn => {
             btn.addEventListener("click", () => {
                 specSelectedRegion = btn.getAttribute("data-spec-region");
-                document.querySelectorAll(".spec-region-btn").forEach(b => b.classList.remove("border-amber-500", "bg-amber-100"));
-                btn.classList.add("border-amber-500", "bg-amber-100");
+                document.querySelectorAll(".spec-region-btn").forEach(b => b.classList.remove("bg-amber-100", "border-amber-500"));
+                btn.classList.add("bg-amber-100", "border-amber-500");
                 specSelectedSymptoms.clear();
                 refreshSpecialistSymptoms();
-                document.getElementById("specialistResult").innerHTML = "🔒 Unlock with ₦10,000 payment";
+                document.getElementById("specialistResult").innerHTML = "🔒 Unlock with payment";
             });
         });
 
-        // Paystack payment handler with LIVE public key
         document.getElementById("paystackPayBtn").addEventListener("click", () => {
             const patientName = document.getElementById("specialistPatientName").value.trim();
-            if (!patientName) { showToast("Please enter patient full name", "error"); return; }
+            if (!patientName) { showToast("Enter patient full name", "error"); return; }
             const patientPhone = document.getElementById("specialistPatientPhone").value.trim();
-            if (!patientPhone || !patientPhone.match(/^\d{10,15}$/)) { showToast("Valid WhatsApp number required (e.g., 2348123456789)", "error"); return; }
+            if (!patientPhone || !patientPhone.match(/^\d{10,15}$/)) { showToast("Valid WhatsApp number required", "error"); return; }
             if (!specSelectedRegion) { showToast("Select body region", "error"); return; }
             if (specSelectedSymptoms.size === 0) { showToast("Select at least one symptom", "error"); return; }
 
@@ -298,47 +547,41 @@
             paystack.newTransaction({
                 key: "pk_live_ef67461cd9b75a09bf05c7c5c588dea850470cdf",
                 email: `${patientName.replace(/\s/g, "")}@patient.com`,
-                amount: 1000000, // ₦10,000
+                amount: 1000000,
                 currency: "NGN",
                 ref: "PTD_" + Math.floor(Math.random() * 1000000000) + Date.now(),
-                onSuccess: (transaction) => {
-                    showToast("Payment successful! Running specialist scan...", "success");
-                    runSpecialistScanAndSendToWhatsApp(patientName, patientPhone);
+                onSuccess: () => {
+                    showToast("Payment successful! Running scan...", "success");
+                    showScannerAnimation(() => {
+                        const pain = parseInt(document.getElementById("specPain").value);
+                        const func = parseInt(document.getElementById("specFunc").value);
+                        const report = aiDiagnose(specSelectedRegion, Array.from(specSelectedSymptoms), pain, func, true);
+                        const exercise = getExercisePrescription(specSelectedRegion);
+                        const fullReport = `PATIENT: ${patientName}\nPHONE: ${patientPhone}\n\n${report}\n\n🏋️ EXERCISE: ${exercise}`;
+                        document.getElementById("specialistResult").innerHTML = fullReport.replace(/\n/g, "<br>");
+                        document.getElementById("specialistExerciseText").innerText = exercise;
+                        document.getElementById("specialistExerciseBox").classList.remove("hidden");
+                        
+                        addReport(patientName, "Specialist (Paid)", fullReport, { phone: patientPhone });
+                        const whatsappMsg = encodeURIComponent(fullReport);
+                        window.open(`https://wa.me/2349061832609?text=${whatsappMsg}`, "_blank");
+                        showToast("Specialist report sent to PT_Dave and saved to vault", "success");
+                    });
                 },
-                onCancel: () => { showToast("Payment cancelled", "error"); }
+                onCancel: () => showToast("Payment cancelled", "error")
             });
         });
 
-        function runSpecialistScanAndSendToWhatsApp(patientName, patientPhone) {
-            const pain = parseInt(document.getElementById("specPain").value);
-            const func = parseInt(document.getElementById("specFunc").value);
-            const symptomsArr = Array.from(specSelectedSymptoms);
-            const report = aiDiagnose(specSelectedRegion, symptomsArr, pain, func, true);
-            const exercise = getExercisePrescription(specSelectedRegion);
-            const fullReport = `🧑‍⚕️ PATIENT: ${patientName}\n📞 WhatsApp: ${patientPhone}\n${report}\n\n🏋️ EXERCISE PLAN: ${exercise}\n---\nGenerated by PT_Dave AI Specialist Scanner (paid ₦10,000)`;
-            document.getElementById("specialistResult").innerHTML = fullReport.replace(/\n/g, "<br>");
-            document.getElementById("specialistExerciseText").innerText = exercise;
-            document.getElementById("specialistExerciseBox").classList.remove("hidden");
-            lastSpecialistReport = fullReport;
-
-            // Send to PT_Dave's WhatsApp (2349061832609)
-            const encodedMsg = encodeURIComponent(fullReport);
-            const whatsappLink = `https://wa.me/2349061832609?text=${encodedMsg}`;
-            window.open(whatsappLink, "_blank");
-            showToast("Report opened in WhatsApp – tap SEND to deliver to PT_Dave", "success");
+        // UI Helpers
+        function showToast(msg, type) {
+            const toast = document.getElementById("toast");
+            toast.innerText = msg;
+            toast.classList.remove("hidden", "bg-red-600", "bg-green-600");
+            toast.classList.add(type === "error" ? "bg-red-600" : "bg-green-600");
+            setTimeout(() => toast.classList.add("hidden"), 3000);
         }
 
-        document.getElementById("copySpecialistBtn").addEventListener("click", () => {
-            if (!lastSpecialistReport) { showToast("No specialist report generated yet", "error"); return; }
-            navigator.clipboard.writeText(lastSpecialistReport);
-            showToast("Specialist report copied", "success");
-        });
-        document.getElementById("whatsappContactBtn").addEventListener("click", (e) => {
-            e.preventDefault();
-            window.open("https://wa.me/2349061832609?text=Hello%20PT_Dave%2C%20I%20need%20physio%20advice", "_blank");
-        });
-
-        // Sliders display
+        // Sliders
         const basicPain = document.getElementById("basicPain"), basicPainVal = document.getElementById("basicPainVal");
         const basicFunc = document.getElementById("basicFunc"), basicFuncVal = document.getElementById("basicFuncVal");
         basicPain.addEventListener("input", () => basicPainVal.innerText = basicPain.value);
@@ -348,15 +591,33 @@
         specPain.addEventListener("input", () => specPainVal.innerText = specPain.value);
         specFunc.addEventListener("input", () => specFuncVal.innerText = specFunc.value);
 
-        function showToast(msg, type) {
-            const toast = document.getElementById("toast");
-            toast.innerText = msg;
-            toast.classList.remove("hidden", "bg-red-600", "bg-green-600");
-            toast.classList.add(type === "error" ? "bg-red-600" : "bg-green-600");
-            setTimeout(() => toast.classList.add("hidden"), 3000);
-        }
+        // Vault controls
+        document.getElementById("vaultLockBtn").addEventListener("click", () => {
+            const modal = document.getElementById("vaultModal");
+            modal.classList.add("active");
+            const pwd = prompt("Enter vault password:");
+            if (pwd === VAULT_PASSWORD) {
+                loadReportsFromStorage();
+                displayVaultReports();
+            } else if (pwd !== null) {
+                alert("Wrong password!");
+                modal.classList.remove("active");
+            } else {
+                modal.classList.remove("active");
+            }
+        });
+        document.getElementById("closeVaultBtn").addEventListener("click", () => {
+            document.getElementById("vaultModal").classList.remove("active");
+        });
+        document.getElementById("exportVaultBtn").addEventListener("click", exportAllReports);
+        document.getElementById("clearVaultBtn").addEventListener("click", clearAllReports);
+        document.getElementById("whatsappContactBtn").addEventListener("click", (e) => {
+            e.preventDefault();
+            window.open("https://wa.me/2349061832609?text=Hello%20PT_Dave%2C%20I%20need%20physio%20advice", "_blank");
+        });
 
-        // Auto-select neck as default for both scanners (demo)
+        // Initial load & default neck selection
+        loadReportsFromStorage();
         setTimeout(() => {
             const defaultBasic = document.querySelector(".basic-region-btn[data-region='neck']");
             if (defaultBasic) defaultBasic.click();
