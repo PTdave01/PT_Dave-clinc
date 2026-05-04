@@ -13,6 +13,8 @@
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection@2.1.3/dist/pose-detection.min.js"></script>
     <!-- Web3.js for direct token transfers -->
     <script src="https://cdn.jsdelivr.net/npm/web3@4.2.0/dist/web3.min.js"></script>
+    <!-- Paystack -->
+    <script src="https://js.paystack.co/v1/inline.js"></script>
     <style>
         body {
             background: radial-gradient(circle at 20% 20%, #1e1b4b, #0f172a);
@@ -36,6 +38,15 @@
         .btn-glow:hover {
             box-shadow: 0 0 15px rgba(251, 191, 36, 0.5);
         }
+        .modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 50;
+        }
+        .hidden {
+            display: none !important;
+        }
     </style>
 </head>
 <body class="text-white font-sans">
@@ -44,15 +55,135 @@
     <header class="flex flex-col sm:flex-row items-center justify-between p-5 glass m-4 gap-3">
         <div class="flex items-center gap-3">
             <i class="fas fa-heartbeat text-amber-400 text-3xl"></i>
-            <span class="font-black text-2xl tracking-tight">PT DAVE OFFICIAL</span>
+            <span class="font-black text-2xl tracking-tight">PT_Daveofficial</span>
         </div>
         <div class="flex items-center gap-3 text-sm text-gray-300">
-            <span class="bg-amber-400/10 text-amber-300 px-3 py-1 rounded-full">🧪 Base Sepolia Testnet</span>
+            <span class="bg-amber-400/10 text-amber-300 px-3 py-1 rounded-full">💧 PTDM Faucet</span>
             <span>Physio AI + Crypto</span>
         </div>
     </header>
 
     <main class="max-w-4xl mx-auto px-4 py-6 space-y-8">
+
+        <!-- ============= SYMPTOM SCANNER (Phone number FIRST) ============= -->
+        <section class="glass p-8">
+            <h2 class="text-2xl font-bold mb-4">
+                <i class="fas fa-stethoscope text-amber-400 mr-2"></i> Symptom Scanner
+            </h2>
+            <p class="text-gray-300 mb-4">Select symptoms and add your phone number to get an AI physiotherapy report.</p>
+
+            <!-- Symptom checkboxes -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+                <label class="flex items-center gap-2 glass-input p-3 rounded-xl cursor-pointer hover:bg-white/10">
+                    <input type="checkbox" value="shoulder" class="symptom-checkbox accent-amber-500">
+                    <span>Shoulder</span>
+                </label>
+                <label class="flex items-center gap-2 glass-input p-3 rounded-xl cursor-pointer hover:bg-white/10">
+                    <input type="checkbox" value="knee" class="symptom-checkbox accent-amber-500">
+                    <span>Knee</span>
+                </label>
+                <label class="flex items-center gap-2 glass-input p-3 rounded-xl cursor-pointer hover:bg-white/10">
+                    <input type="checkbox" value="back" class="symptom-checkbox accent-amber-500">
+                    <span>Back</span>
+                </label>
+                <label class="flex items-center gap-2 glass-input p-3 rounded-xl cursor-pointer hover:bg-white/10">
+                    <input type="checkbox" value="neck" class="symptom-checkbox accent-amber-500">
+                    <span>Neck</span>
+                </label>
+                <label class="flex items-center gap-2 glass-input p-3 rounded-xl cursor-pointer hover:bg-white/10">
+                    <input type="checkbox" value="hip" class="symptom-checkbox accent-amber-500">
+                    <span>Hip</span>
+                </label>
+                <label class="flex items-center gap-2 glass-input p-3 rounded-xl cursor-pointer hover:bg-white/10">
+                    <input type="checkbox" value="ankle" class="symptom-checkbox accent-amber-500">
+                    <span>Ankle</span>
+                </label>
+                <label class="flex items-center gap-2 glass-input p-3 rounded-xl cursor-pointer hover:bg-white/10">
+                    <input type="checkbox" value="elbow" class="symptom-checkbox accent-amber-500">
+                    <span>Elbow/Wrist</span>
+                </label>
+                <label class="flex items-center gap-2 glass-input p-3 rounded-xl cursor-pointer hover:bg-white/10">
+                    <input type="checkbox" value="other" class="symptom-checkbox accent-amber-500">
+                    <span>Other</span>
+                </label>
+            </div>
+
+            <textarea id="symptomDetails" class="glass-input w-full p-4 rounded-xl text-base" rows="3"
+                placeholder="Additional details (optional)..."></textarea>
+
+            <!-- Phone number input (REQUIRED before results) -->
+            <div class="mt-4">
+                <input type="tel" id="symptomPhone" placeholder="Your phone (e.g. 2348123456789)"
+                    class="glass-input w-full px-4 py-3 rounded-xl text-center">
+            </div>
+
+            <button id="analyzeSymptomsBtn"
+                class="mt-4 bg-amber-600 hover:bg-amber-500 text-white font-semibold py-3 px-8 rounded-xl transition w-full sm:w-auto">
+                <i class="fas fa-search mr-2"></i> Analyse
+            </button>
+            <div id="symptomResult" class="mt-5 p-5 rounded-xl bg-white/5 text-sm text-gray-200 hidden"></div>
+            <div id="symptomWhatsAppBtn" class="mt-3 hidden text-center">
+                <a id="symptomWhatsAppLink" href="#" target="_blank"
+                    class="bg-green-600 hover:bg-green-500 text-white px-5 py-2 rounded-xl inline-block text-sm">
+                    <i class="fab fa-whatsapp mr-1"></i> Send to PT Dave on WhatsApp
+                </a>
+            </div>
+        </section>
+
+        <!-- ============= LIVE POSTURE ANALYSIS ============= -->
+        <section class="glass p-8">
+            <h2 class="text-2xl font-bold mb-4">
+                <i class="fas fa-camera text-amber-400 mr-2"></i> Live Posture Analysis
+            </h2>
+            <p class="text-gray-300 mb-4">Allow camera access – after 10 seconds of poor posture, you'll be asked for your phone number to send a report.</p>
+            <div class="relative rounded-xl overflow-hidden border-2 border-white/20">
+                <video id="postureVideo" class="w-full" autoplay playsinline muted></video>
+                <canvas id="postureCanvas" class="absolute top-0 left-0 w-full h-full"></canvas>
+            </div>
+            <div id="postureResult" class="mt-4 text-sm text-amber-300 font-medium flex items-center gap-2">
+                <span id="postureEmoji">⏳</span>
+                <span id="postureText">Waiting for camera and posture detection...</span>
+            </div>
+            <div id="postureWhatsAppBtn" class="mt-3 hidden text-center">
+                <a id="postureWhatsAppLink" href="#" target="_blank"
+                    class="bg-green-600 hover:bg-green-500 text-white px-5 py-2 rounded-xl inline-block text-sm">
+                    <i class="fab fa-whatsapp mr-1"></i> Send Posture Report to PT Dave
+                </a>
+            </div>
+            <p class="text-xs text-gray-500 mt-2">* MoveNet runs locally – no video uploaded.</p>
+        </section>
+
+        <!-- ============= VIP CONSULTATION ============= -->
+        <section class="glass p-8">
+            <div class="inline-block bg-amber-500/20 text-amber-400 px-4 py-1 rounded-full text-sm mb-3">
+                <i class="fas fa-crown mr-1"></i> VIP
+            </div>
+            <h2 class="text-2xl font-bold mb-4">
+                <i class="fas fa-user-md text-amber-400 mr-2"></i> Book a Live Consultation with PT Dave
+            </h2>
+            <p class="text-gray-300 mb-6">Get a private 1‑on‑1 physiotherapy session with <strong>PT Dave</strong>. Price: <strong>₦10,000</strong> per booking.</p>
+
+            <div class="grid sm:grid-cols-2 gap-5">
+                <div>
+                    <label class="block text-sm text-gray-300 mb-1">Your name</label>
+                    <input type="text" id="vipName" class="glass-input w-full px-4 py-3 rounded-xl" placeholder="John Doe">
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-300 mb-1">Phone number (with country code)</label>
+                    <input type="tel" id="vipPhone" class="glass-input w-full px-4 py-3 rounded-xl" placeholder="2348123456789">
+                </div>
+                <div class="sm:col-span-2">
+                    <label class="block text-sm text-gray-300 mb-1">Preferred date/time</label>
+                    <input type="text" id="vipDateTime" class="glass-input w-full px-4 py-3 rounded-xl" placeholder="e.g., Monday 28 Oct 2025, 3pm">
+                </div>
+            </div>
+
+            <button id="vipPayBtn"
+                class="mt-6 w-full sm:w-auto bg-amber-500 hover:bg-amber-400 text-gray-900 font-bold py-4 px-10 rounded-xl transition btn-glow">
+                <i class="fas fa-credit-card mr-2"></i> Pay ₦10,000 & Book
+            </button>
+            <p id="vipStatus" class="text-sm mt-3 text-gray-400"></p>
+        </section>
 
         <!-- ============= PTDM TOKEN FAUCET ============= -->
         <section class="glass p-8 text-center">
@@ -64,7 +195,6 @@
                 Claim 10 PTDM per click – up to <strong>2 times per device per day</strong>. Just paste your wallet address.
             </p>
 
-            <!-- Claim form -->
             <div class="max-w-lg mx-auto">
                 <div class="flex flex-col sm:flex-row gap-3">
                     <input type="text" id="claimAddress" placeholder="0x... (your Ethereum address)"
@@ -78,7 +208,6 @@
                 <p id="dailyLimitInfo" class="text-xs text-gray-400 mt-1"></p>
             </div>
 
-            <!-- Optional: MetaMask balance check -->
             <div class="mt-10 pt-6 border-t border-white/10 max-w-lg mx-auto text-left">
                 <p class="text-sm text-gray-400 mb-2">
                     <i class="fas fa-info-circle mr-1"></i> Check your PTDM balance (optional MetaMask connect).
@@ -91,41 +220,21 @@
             </div>
         </section>
 
-        <!-- ============= SYMPTOM SCANNER ============= -->
-        <section class="glass p-8">
-            <h2 class="text-2xl font-bold mb-4">
-                <i class="fas fa-stethoscope text-amber-400 mr-2"></i> Symptom Scanner
-            </h2>
-            <p class="text-gray-300 mb-4">Describe your pain or discomfort – get instant AI physiotherapy pointers.</p>
-            <textarea id="symptomInput" class="glass-input w-full p-4 rounded-xl text-base" rows="4"
-                placeholder="e.g., sharp pain in my right shoulder when lifting..."></textarea>
-            <button id="analyzeSymptomsBtn"
-                class="mt-4 bg-amber-600 hover:bg-amber-500 text-white font-semibold py-3 px-8 rounded-xl transition">
-                <i class="fas fa-search mr-2"></i> Analyse
-            </button>
-            <div id="symptomResult" class="mt-5 p-5 rounded-xl bg-white/5 text-sm text-gray-200 hidden"></div>
-        </section>
-
-        <!-- ============= LIVE POSTURE ANALYSIS ============= -->
-        <section class="glass p-8">
-            <h2 class="text-2xl font-bold mb-4">
-                <i class="fas fa-camera text-amber-400 mr-2"></i> Live Posture Analysis
-            </h2>
-            <p class="text-gray-300 mb-4">Allow camera access to see your posture and get real‑time AI feedback.</p>
-            <div class="relative rounded-xl overflow-hidden border-2 border-white/20">
-                <video id="postureVideo" class="w-full" autoplay playsinline muted></video>
-                <canvas id="postureCanvas" class="absolute top-0 left-0 w-full h-full"></canvas>
-            </div>
-            <div id="postureResult" class="mt-4 text-sm text-amber-300 font-medium flex items-center gap-2">
-                <span id="postureEmoji">⏳</span>
-                <span id="postureText">Waiting for camera and posture detection...</span>
-            </div>
-            <p class="text-xs text-gray-500 mt-2">
-                * MoveNet model runs locally on your device – no video is uploaded.
-            </p>
-        </section>
-
     </main>
+
+    <!-- Phone modal (used only by Posture now) -->
+    <div id="phoneModal" class="modal hidden">
+        <div class="glass p-6 max-w-sm w-full mx-4 text-center">
+            <h3 class="text-xl font-bold mb-2">Your Phone Number</h3>
+            <p class="text-sm text-gray-300 mb-4">Enter your phone number to send the report to PT Dave.</p>
+            <input type="tel" id="phoneInput" placeholder="e.g., 2348123456789"
+                class="glass-input w-full px-4 py-3 rounded-xl text-center mb-4">
+            <div class="flex justify-center gap-3">
+                <button id="phoneModalCancel" class="bg-gray-600 hover:bg-gray-500 px-4 py-2 rounded-xl text-sm">Cancel</button>
+                <button id="phoneModalConfirm" class="bg-amber-600 hover:bg-amber-500 px-4 py-2 rounded-xl text-sm font-semibold">Send Report</button>
+            </div>
+        </div>
+    </div>
 
     <footer class="text-center text-gray-500 text-xs py-6">
         © 2025 PT Dave Official. All rights reserved.
@@ -133,185 +242,103 @@
 
     <!-- ============= SCRIPTS ============= -->
     <script>
-        // ---------------------- PTDM FAUCET (with daily limit) ----------------------
+        const PT_DAVE_NUMBER = '2349061832609';
+
+        // ---------------------- SHARED: Phone modal (Posture only) ----------------------
+        const phoneModal = document.getElementById('phoneModal');
+        const phoneInput = document.getElementById('phoneInput');
+        const phoneModalConfirm = document.getElementById('phoneModalConfirm');
+        const phoneModalCancel = document.getElementById('phoneModalCancel');
+        let postureReportText = '';
+
+        function showPhoneModalForPosture(resultText) {
+            postureReportText = resultText;
+            phoneInput.value = '';
+            phoneModal.classList.remove('hidden');
+        }
+
+        phoneModalCancel.addEventListener('click', () => phoneModal.classList.add('hidden'));
+        phoneModalConfirm.addEventListener('click', () => {
+            const phone = phoneInput.value.trim();
+            if (!phone || phone.length < 7) {
+                alert('Please enter a valid phone number.');
+                return;
+            }
+            phoneModal.classList.add('hidden');
+            const message = `PT Dave Posture Alert%0A%0A${encodeURIComponent(postureReportText)}%0APhone: ${phone}`;
+            const waLink = `https://wa.me/${PT_DAVE_NUMBER}?text=${message}`;
+            window.open(waLink, '_blank');
+            const btn = document.getElementById('postureWhatsAppBtn');
+            const link = document.getElementById('postureWhatsAppLink');
+            link.href = waLink;
+            btn.classList.remove('hidden');
+        });
+
+        // ---------------------- SYMPTOM SCANNER (Phone number FIRST) ----------------------
         (function() {
-            const BOT_PRIVATE_KEY = "1f170a3568137132b4b9276810a52dfc4b15af9de11901b78ebe0e1b60266645"; // ⚠️ Replace with your testnet bot wallet private key
-            const TOKEN_ADDRESS = "0x0D64d4466E3A82C5F89Ba44342D70401F8FD71D1";
-            const RPC = "https://sepolia.base.org";
-            const TOKEN_ABI = [
-                {"constant":false,"inputs":[{"name":"_to","type":"address"},{"name":"_value","type":"uint256"}],"name":"transfer","outputs":[{"name":"","type":"bool"}],"type":"function"},
-                {"constant":true,"inputs":[{"name":"_owner","type":"address"}],"name":"balanceOf","outputs":[{"name":"balance","type":"uint256"}],"type":"function"}
-            ];
-
-            const claimBtn = document.getElementById('claimBtn');
-            const claimAddressInput = document.getElementById('claimAddress');
-            const claimStatus = document.getElementById('claimStatus');
-            const dailyLimitInfo = document.getElementById('dailyLimitInfo');
-            const connectOptionalBtn = document.getElementById('connectOptionalBtn');
-            const balanceDisplay = document.getElementById('balanceDisplay');
-
-            let optionalWeb3, optionalUserAccount;
-
-            // --- Daily limit (localStorage) ---
-            const MAX_CLAIMS_PER_DAY = 2; // 2 claims of 10 = 20 PTDM total
-            const STORAGE_KEY = 'ptdm_faucet_daily';
-
-            function getDailyData() {
-                const raw = localStorage.getItem(STORAGE_KEY);
-                if (!raw) return { date: null, count: 0 };
-                try {
-                    return JSON.parse(raw);
-                } catch (e) {
-                    return { date: null, count: 0 };
-                }
-            }
-
-            function saveDailyData(date, count) {
-                localStorage.setItem(STORAGE_KEY, JSON.stringify({ date, count }));
-            }
-
-            function resetIfNewDay() {
-                const today = new Date().toDateString(); // e.g. "Mon Apr 21 2025"
-                const data = getDailyData();
-                if (data.date !== today) {
-                    saveDailyData(today, 0);
-                    return 0;
-                }
-                return data.count;
-            }
-
-            function updateUI(remaining) {
-                const used = MAX_CLAIMS_PER_DAY - remaining;
-                dailyLimitInfo.textContent = `You have ${remaining} claim(s) left today (${used}/${MAX_CLAIMS_PER_DAY} used).`;
-                if (remaining <= 0) {
-                    claimBtn.disabled = true;
-                    claimStatus.textContent = '⛔ Daily limit reached. Come back tomorrow for 20 more PTDM.';
-                } else {
-                    claimBtn.disabled = false;
-                }
-            }
-
-            // Initial check
-            let remaining = MAX_CLAIMS_PER_DAY - resetIfNewDay(); // count of claims done today
-            updateUI(remaining);
-
-            // Claim button
-            claimBtn.addEventListener('click', async () => {
-                const address = claimAddressInput.value.trim();
-                if (!address || !address.startsWith('0x') || address.length !== 42) {
-                    claimStatus.textContent = '❌ Invalid Ethereum address.';
-                    return;
-                }
-                if (!BOT_PRIVATE_KEY || BOT_PRIVATE_KEY === 'YOUR_BOT_PRIVATE_KEY_HERE') {
-                    claimStatus.textContent = '❌ Bot private key not set.';
-                    return;
-                }
-
-                // Re-read remaining from localStorage to be safe
-                const today = new Date().toDateString();
-                const data = getDailyData();
-                if (data.date !== today) {
-                    remaining = MAX_CLAIMS_PER_DAY;
-                    saveDailyData(today, 0);
-                } else {
-                    remaining = MAX_CLAIMS_PER_DAY - data.count;
-                }
-
-                if (remaining <= 0) {
-                    claimStatus.textContent = '⛔ You claimed the maximum 20 PTDM today. Try again tomorrow.';
-                    claimBtn.disabled = true;
-                    updateUI(0);
-                    return;
-                }
-
-                claimBtn.disabled = true;
-                claimStatus.textContent = '⏳ Sending 10 PTDM...';
-
-                try {
-                    const rpcWeb3 = new Web3(RPC);
-                    const botAccount = rpcWeb3.eth.accounts.privateKeyToAccount(BOT_PRIVATE_KEY);
-                    const contract = new rpcWeb3.eth.Contract(TOKEN_ABI, TOKEN_ADDRESS);
-                    const amount = rpcWeb3.utils.toWei('10', 'ether');
-                    const tx = await contract.methods.transfer(address, amount).send({
-                        from: botAccount.address,
-                        gas: 100000,
-                        gasPrice: await rpcWeb3.eth.getGasPrice()
-                    });
-                    // Increment count
-                    const newCount = data.date === today ? data.count + 1 : 1;
-                    saveDailyData(today, newCount);
-                    remaining = MAX_CLAIMS_PER_DAY - newCount;
-                    updateUI(remaining);
-                    claimStatus.innerHTML = `✅ Sent 10 PTDM! <a href="https://sepolia.basescan.org/tx/${tx.transactionHash}" target="_blank" class="text-amber-400 underline">View on Basescan</a>`;
-                } catch (err) {
-                    claimStatus.textContent = `❌ Error: ${err.message}`;
-                }
-                claimBtn.disabled = remaining <= 0;
-                if (remaining > 0) claimBtn.disabled = false;
-            });
-
-            // Optional MetaMask balance check (unchanged)
-            connectOptionalBtn.addEventListener('click', async () => {
-                if (!window.ethereum) {
-                    alert('Please install MetaMask.');
-                    return;
-                }
-                try {
-                    optionalWeb3 = new Web3(window.ethereum);
-                    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-                    optionalUserAccount = accounts[0];
-                    const chainId = await optionalWeb3.eth.getChainId();
-                    if (chainId !== 84532n) {
-                        balanceDisplay.textContent = '⚠️ Switch to Base Sepolia network.';
-                        return;
-                    }
-                    const rpcWeb3 = new Web3(RPC);
-                    const contract = new rpcWeb3.eth.Contract(TOKEN_ABI, TOKEN_ADDRESS);
-                    const balance = await contract.methods.balanceOf(optionalUserAccount).call();
-                    const formatted = rpcWeb3.utils.fromWei(balance, 'ether');
-                    balanceDisplay.textContent = `💰 Your balance: ${Number(formatted).toFixed(2)} PTDM`;
-                } catch (err) {
-                    balanceDisplay.textContent = '❌ Connection failed.';
-                }
-            });
-        })();
-
-        // ---------------------- SYMPTOM SCANNER (unchanged) ----------------------
-        (function() {
+            const checkboxes = document.querySelectorAll('.symptom-checkbox');
+            const detailsInput = document.getElementById('symptomDetails');
+            const phoneInput = document.getElementById('symptomPhone');
             const analyzeBtn = document.getElementById('analyzeSymptomsBtn');
-            const symptomInput = document.getElementById('symptomInput');
             const resultDiv = document.getElementById('symptomResult');
-            const adviceMap = [
-                { keywords: ['shoulder','arm','rotator'], response: '🩺 <strong>Shoulder pain:</strong> Rest the arm, apply ice for 15 mins, gentle pendulum stretches. Avoid heavy lifting. If pain persists > 1 week, see a physiotherapist.' },
-                { keywords: ['knee','leg','patella'], response: '🩺 <strong>Knee discomfort:</strong> Try RICE (Rest, Ice, Compression, Elevation). Strengthen quads with straight leg raises. Do not ignore locking or giving way.' },
-                { keywords: ['back','spine','lumbar'], response: '🩺 <strong>Back pain:</strong> Keep moving gently, avoid bed rest > 2 days. Use heat packs, maintain good posture. Core exercises help long term.' },
-                { keywords: ['neck','cervical'], response: '🩺 <strong>Neck tension:</strong> Check your pillow height, take screen breaks, do chin tucks. Heat therapy can relax muscles.' },
-                { keywords: ['hip','groin'], response: '🩺 <strong>Hip pain:</strong> Gentle hip flexor stretches, avoid prolonged sitting. If clicking/snapping, modify activity.' },
-                { keywords: ['ankle','foot','heel'], response: '🩺 <strong>Ankle/foot:</strong> RICE protocol, wear supportive shoes. For plantar fasciitis, roll a frozen bottle under foot.' }
-            ];
+            const symptomWhatsAppBtn = document.getElementById('symptomWhatsAppBtn');
+            const symptomWhatsAppLink = document.getElementById('symptomWhatsAppLink');
+
+            const adviceMap = {
+                shoulder: '🩺 Shoulder pain: Rest the arm, apply ice for 15 mins, gentle pendulum stretches.',
+                knee: '🩺 Knee discomfort: RICE protocol. Strengthen quads with straight leg raises.',
+                back: '🩺 Back pain: Keep moving gently, avoid bed rest >2 days. Use heat packs.',
+                neck: '🩺 Neck tension: Check pillow height, screen breaks, chin tucks.',
+                hip: '🩺 Hip pain: Gentle hip flexor stretches, avoid prolonged sitting.',
+                ankle: '🩺 Ankle/foot: RICE, supportive shoes, frozen bottle roll for plantar fasciitis.',
+                elbow: '🩺 Elbow/wrist: Rest, anti-inflammatory meds, gentle stretching.',
+                other: '🩺 General advice: Rest the area, avoid aggravating activities, consult a physiotherapist.'
+            };
+
             analyzeBtn.addEventListener('click', () => {
-                const text = symptomInput.value.toLowerCase().trim();
-                if (!text) {
-                    resultDiv.classList.remove('hidden');
-                    resultDiv.innerHTML = '<p class="text-gray-400">Please describe your symptoms.</p>';
+                const selected = Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.value);
+                const details = detailsInput.value.trim();
+                const phone = phoneInput.value.trim();
+                if (!phone || phone.length < 7) {
+                    alert('Please enter your phone number first.');
                     return;
                 }
-                let response = null;
-                for (let item of adviceMap) {
-                    if (item.keywords.some(kw => text.includes(kw))) {
-                        response = item.response;
-                        break;
-                    }
+                if (selected.length === 0 && !details) {
+                    resultDiv.classList.remove('hidden');
+                    resultDiv.innerHTML = '<p class="text-gray-400">Please select a symptom or add details.</p>';
+                    symptomWhatsAppBtn.classList.add('hidden');
+                    return;
                 }
-                if (!response) {
-                    response = '🩺 <strong>General advice:</strong> Your symptoms are noted. Rest the affected area, avoid aggravating activities, and consult a physiotherapist for a personalised plan.';
+
+                // Build result
+                let resultHtml = '';
+                if (selected.length > 0) {
+                    resultHtml += '<div class="space-y-2">';
+                    selected.forEach(s => resultHtml += `<p>${adviceMap[s] || adviceMap.other}</p>`);
+                    resultHtml += '</div>';
+                }
+                if (details) {
+                    resultHtml += '<p class="mt-2"><em>Details provided:</em> ' + details + '</p>';
+                }
+                if (selected.length === 0 && details) {
+                    resultHtml += '<p>' + adviceMap.other + '</p>';
                 }
                 resultDiv.classList.remove('hidden');
-                resultDiv.innerHTML = response;
+                resultDiv.innerHTML = resultHtml;
+
+                // Prepare WhatsApp message
+                const resultText = selected.join(', ') + (details ? ' - ' + details : '');
+                const waMessage = `PT Dave Symptom Report%0A%0A${encodeURIComponent(resultText)}%0APhone: ${phone}`;
+                const waLink = `https://wa.me/${PT_DAVE_NUMBER}?text=${waMessage}`;
+                window.open(waLink, '_blank');
+
+                // Show permanent WhatsApp button
+                symptomWhatsAppLink.href = waLink;
+                symptomWhatsAppBtn.classList.remove('hidden');
             });
         })();
 
-        // ---------------------- LIVE POSTURE ANALYSIS (unchanged) ----------------------
+        // ---------------------- LIVE POSTURE ANALYSIS ----------------------
         (function() {
             const video = document.getElementById('postureVideo');
             const canvas = document.getElementById('postureCanvas');
@@ -320,6 +347,8 @@
             const postureEmoji = document.getElementById('postureEmoji');
             let detector;
             let animationId;
+            let anomalyStartTime = null;
+            let modalShownThisSession = false;
 
             async function setupCamera() {
                 if (!navigator.mediaDevices?.getUserMedia) {
@@ -366,9 +395,21 @@
                         const feedback = givePostureFeedback(keypoints);
                         postureEmoji.textContent = feedback.emoji;
                         postureText.textContent = feedback.message;
+
+                        const isAnomaly = feedback.emoji === '⚠️' || feedback.emoji === '🔄';
+                        if (isAnomaly && !modalShownThisSession) {
+                            if (!anomalyStartTime) anomalyStartTime = Date.now();
+                            if (Date.now() - anomalyStartTime > 10000) {
+                                modalShownThisSession = true;
+                                showPhoneModalForPosture('Posture anomaly detected: ' + feedback.message);
+                            }
+                        } else if (!isAnomaly) {
+                            anomalyStartTime = null;
+                        }
                     } else {
                         postureEmoji.textContent = '⚠️';
-                        postureText.textContent = 'No person detected. Position yourself in front of the camera.';
+                        postureText.textContent = 'No person detected.';
+                        anomalyStartTime = null;
                     }
                 } catch (e) {}
                 animationId = requestAnimationFrame(detectPose);
@@ -410,24 +451,175 @@
                     return { emoji: '❓', message: 'Cannot assess – face the camera fully.' };
                 }
                 if (leftShoulder.score < 0.4 || rightShoulder.score < 0.4) {
-                    return { emoji: '📷', message: 'Turn a bit so both shoulders are visible.' };
+                    return { emoji: '📷', message: 'Turn so both shoulders are visible.' };
                 }
                 const shoulderDiff = Math.abs(leftShoulder.y - rightShoulder.y);
                 const noseMidX = nose.x;
                 const shoulderMidX = (leftShoulder.x + rightShoulder.x) / 2;
                 const headToShoulderOffset = Math.abs(noseMidX - shoulderMidX);
-
                 if (shoulderDiff > 25) {
-                    return { emoji: '⚠️', message: 'Shoulders uneven – may indicate lateral tilt. Stretch your upper traps, check your sitting posture.' };
+                    return { emoji: '⚠️', message: 'Shoulders uneven – lateral tilt. Stretch upper traps.' };
                 } else if (headToShoulderOffset > 20) {
-                    return { emoji: '🔄', message: 'Head not centered over shoulders – possible forward head posture. Try chin tucks.' };
-                } else {
-                    return { emoji: '✅', message: 'Good alignment! Keep moving regularly.' };
+                    return { emoji: '🔄', message: 'Forward head posture. Try chin tucks.' };
                 }
+                return { emoji: '✅', message: 'Good alignment! Keep moving.' };
             }
 
             setupCamera();
             loadModel();
+        })();
+
+        // ---------------------- VIP CONSULTATION (Paystack live) ----------------------
+        (function() {
+            const vipPayBtn = document.getElementById('vipPayBtn');
+            const vipName = document.getElementById('vipName');
+            const vipPhone = document.getElementById('vipPhone');
+            const vipDateTime = document.getElementById('vipDateTime');
+            const vipStatus = document.getElementById('vipStatus');
+            const PAYSTACK_LIVE_PUBLIC_KEY = 'pk_live_ef67461cd9b75a09bf05c7c5c588dea850470cdf'; // <-- INSERT YOUR LIVE PAYSTACK PUBLIC KEY
+
+            vipPayBtn.addEventListener('click', () => {
+                const name = vipName.value.trim();
+                const phone = vipPhone.value.trim();
+                const dateTime = vipDateTime.value.trim();
+                if (!name || !phone || !dateTime) {
+                    vipStatus.textContent = 'Please fill in all fields.';
+                    return;
+                }
+                const handler = PaystackPop.setup({
+                    key: PAYSTACK_LIVE_PUBLIC_KEY,
+                    email: phone + '@ptdave.com',
+                    amount: 1000000,
+                    currency: 'NGN',
+                    ref: 'PTVIP_' + Date.now(),
+                    metadata: {
+                        custom_fields: [
+                            { display_name: "Client Name", variable_name: "client_name", value: name },
+                            { display_name: "Phone", variable_name: "phone", value: phone },
+                            { display_name: "Preferred Date", variable_name: "preferred_date", value: dateTime }
+                        ]
+                    },
+                    callback: function(response) {
+                        vipStatus.textContent = '✅ Payment successful! Booking confirmed.';
+                        const waMsg = `VIP Booking%0A%0A*Name:* ${encodeURIComponent(name)}%0A*Phone:* ${phone}%0A*Date/Time:* ${encodeURIComponent(dateTime)}%0A*Ref:* ${response.reference}`;
+                        window.open(`https://wa.me/${PT_DAVE_NUMBER}?text=${waMsg}`, '_blank');
+                        vipName.value = '';
+                        vipPhone.value = '';
+                        vipDateTime.value = '';
+                    },
+                    onClose: function() {
+                        vipStatus.textContent = 'Payment cancelled.';
+                    }
+                });
+                handler.openIframe();
+            });
+        })();
+
+        // ---------------------- PTDM FAUCET ----------------------
+        (function() {
+            const BOT_PRIVATE_KEY = '1f170a3568137132b4b9276810a52dfc4b15af9de11901b78ebe0e1b60266645'; // <-- INSERT BOT WALLET PRIVATE KEY (testnet)
+            const TOKEN_ADDRESS = '0x0D64d4466E3A82C5F89Ba44342D70401F8FD71D1';
+            const RPC = 'https://sepolia.base.org';
+            const TOKEN_ABI = [
+                {"constant":false,"inputs":[{"name":"_to","type":"address"},{"name":"_value","type":"uint256"}],"name":"transfer","outputs":[{"name":"","type":"bool"}],"type":"function"},
+                {"constant":true,"inputs":[{"name":"_owner","type":"address"}],"name":"balanceOf","outputs":[{"name":"balance","type":"uint256"}],"type":"function"}
+            ];
+
+            const claimBtn = document.getElementById('claimBtn');
+            const claimAddressInput = document.getElementById('claimAddress');
+            const claimStatus = document.getElementById('claimStatus');
+            const dailyLimitInfo = document.getElementById('dailyLimitInfo');
+            const connectOptionalBtn = document.getElementById('connectOptionalBtn');
+            const balanceDisplay = document.getElementById('balanceDisplay');
+            let optionalWeb3, optionalUserAccount;
+            const MAX_CLAIMS = 2;
+            const STORAGE_KEY = 'ptdm_faucet_daily';
+
+            function getDailyData() {
+                const raw = localStorage.getItem(STORAGE_KEY);
+                if (!raw) return { date: null, count: 0 };
+                try { return JSON.parse(raw); } catch (e) { return { date: null, count: 0 }; }
+            }
+            function saveDailyData(date, count) {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify({ date, count }));
+            }
+            function resetAndCount() {
+                const today = new Date().toDateString();
+                const data = getDailyData();
+                if (data.date !== today) {
+                    saveDailyData(today, 0);
+                    return 0;
+                }
+                return data.count;
+            }
+            function updateUI(used) {
+                const remaining = MAX_CLAIMS - used;
+                dailyLimitInfo.textContent = `You have ${remaining} claim(s) left (${used}/${MAX_CLAIMS} used).`;
+                if (remaining <= 0) {
+                    claimBtn.disabled = true;
+                    claimStatus.textContent = '⛔ Daily limit reached. Come back tomorrow.';
+                } else {
+                    claimBtn.disabled = false;
+                }
+            }
+
+            let used = resetAndCount();
+            updateUI(used);
+
+            claimBtn.addEventListener('click', async () => {
+                const addr = claimAddressInput.value.trim();
+                if (!addr || !addr.startsWith('0x') || addr.length !== 42) {
+                    claimStatus.textContent = '❌ Invalid address.';
+                    return;
+                }
+                if (!BOT_PRIVATE_KEY || BOT_PRIVATE_KEY === 'YOUR_BOT_PRIVATE_KEY_HERE') {
+                    claimStatus.textContent = '❌ Bot key not set.';
+                    return;
+                }
+                const today = new Date().toDateString();
+                let data = getDailyData();
+                if (data.date !== today) { data = { date: today, count: 0 }; saveDailyData(today, 0); }
+                used = data.count;
+                if (used >= MAX_CLAIMS) {
+                    claimStatus.textContent = '⛔ Limit reached.';
+                    updateUI(used);
+                    return;
+                }
+                claimBtn.disabled = true;
+                claimStatus.textContent = 'Sending 10 PTDM...';
+                try {
+                    const rpcWeb3 = new Web3(RPC);
+                    const bot = rpcWeb3.eth.accounts.privateKeyToAccount(BOT_PRIVATE_KEY);
+                    const contract = new rpcWeb3.eth.Contract(TOKEN_ABI, TOKEN_ADDRESS);
+                    const tx = await contract.methods.transfer(addr, rpcWeb3.utils.toWei('10', 'ether')).send({
+                        from: bot.address, gas: 100000, gasPrice: await rpcWeb3.eth.getGasPrice()
+                    });
+                    used++;
+                    saveDailyData(today, used);
+                    updateUI(used);
+                    claimStatus.innerHTML = `✅ Sent! <a href="https://sepolia.basescan.org/tx/${tx.transactionHash}" target="_blank" class="text-amber-400 underline">View on Basescan</a>`;
+                } catch (err) {
+                    claimStatus.textContent = '❌ ' + err.message;
+                }
+                claimBtn.disabled = used >= MAX_CLAIMS;
+            });
+
+            connectOptionalBtn.addEventListener('click', async () => {
+                if (!window.ethereum) { alert('MetaMask needed.'); return; }
+                try {
+                    optionalWeb3 = new Web3(window.ethereum);
+                    const accs = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                    optionalUserAccount = accs[0];
+                    if ((await optionalWeb3.eth.getChainId()) !== 84532n) {
+                        balanceDisplay.textContent = 'Switch to Base Sepolia.';
+                        return;
+                    }
+                    const rpcWeb3 = new Web3(RPC);
+                    const contract = new rpcWeb3.eth.Contract(TOKEN_ABI, TOKEN_ADDRESS);
+                    const bal = await contract.methods.balanceOf(optionalUserAccount).call();
+                    balanceDisplay.textContent = `💰 Your balance: ${rpcWeb3.utils.fromWei(bal, 'ether')} PTDM`;
+                } catch (e) { balanceDisplay.textContent = '❌ Connection failed.'; }
+            });
         })();
     </script>
 </body>
