@@ -186,39 +186,42 @@
         </section>
 
         <!-- ============= PTDM TOKEN FAUCET ============= -->
-        <section class="glass p-8 text-center">
-            <div class="inline-block bg-amber-500/20 text-amber-400 px-4 py-1 rounded-full text-sm mb-4">
-                Max 20 PTDM per day (2 claims)
-            </div>
-            <h1 class="text-4xl sm:text-5xl font-black mb-3">💧 PTDM Token Faucet</h1>
-            <p class="text-gray-300 max-w-lg mx-auto mb-8">
-                Claim 10 PTDM per click – up to <strong>2 times per device per day</strong>. Just paste your wallet address.
-            </p>
+        <!-- ============= PTDM TOKEN FAUCET ============= -->
+<section class="glass p-8 text-center">
+    <div class="inline-block bg-amber-500/20 text-amber-400 px-4 py-1 rounded-full text-sm mb-4">
+        Max 20 PTDM per day (2 claims)
+    </div>
+    <h1 class="text-4xl sm:text-5xl font-black mb-3">💧 PTDM Token Faucet</h1>
+    <p class="text-gray-300 max-w-lg mx-auto mb-8">
+        Claim 10 PTDM per click – up to <strong>2 times per device per day</strong>. Just paste your wallet address.
+    </p>
 
-            <div class="max-w-lg mx-auto">
-                <div class="flex flex-col sm:flex-row gap-3">
-                    <input type="text" id="claimAddress" placeholder="0x... (your Ethereum address)"
-                        class="glass-input flex-1 px-5 py-4 rounded-xl text-base outline-none focus:ring-2 focus:ring-amber-500 transition">
-                    <button id="claimBtn"
-                        class="bg-amber-500 hover:bg-amber-400 text-gray-900 font-bold px-8 py-4 rounded-xl transition btn-glow disabled:opacity-50 disabled:cursor-not-allowed">
-                        <i class="fas fa-gift mr-2"></i> Claim 10 PTDM
-                    </button>
-                </div>
-                <p id="claimStatus" class="text-sm mt-3 text-gray-300 min-h-[20px]"></p>
-                <p id="dailyLimitInfo" class="text-xs text-gray-400 mt-1"></p>
-            </div>
+    <!-- Claim form (no bot key input) -->
+    <div class="max-w-lg mx-auto">
+        <div class="flex flex-col sm:flex-row gap-3">
+            <input type="text" id="claimAddress" placeholder="0x... (your recipient address)"
+                class="glass-input flex-1 px-5 py-4 rounded-xl text-base outline-none focus:ring-2 focus:ring-amber-500 transition">
+            <button id="claimBtn"
+                class="bg-amber-500 hover:bg-amber-400 text-gray-900 font-bold px-8 py-4 rounded-xl transition btn-glow disabled:opacity-50 disabled:cursor-not-allowed">
+                <i class="fas fa-gift mr-2"></i> Claim 10 PTDM
+            </button>
+        </div>
+        <p id="claimStatus" class="text-sm mt-3 text-gray-300 min-h-[20px]"></p>
+        <p id="dailyLimitInfo" class="text-xs text-gray-400 mt-1"></p>
+    </div>
 
-            <div class="mt-10 pt-6 border-t border-white/10 max-w-lg mx-auto text-left">
-                <p class="text-sm text-gray-400 mb-2">
-                    <i class="fas fa-info-circle mr-1"></i> Check your PTDM balance (optional MetaMask connect).
-                </p>
-                <button id="connectOptionalBtn"
-                    class="bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-200 px-5 py-3 rounded-xl text-sm transition">
-                    <i class="fas fa-wallet mr-2"></i> Connect MetaMask
-                </button>
-                <p id="balanceDisplay" class="text-sm mt-2 font-mono text-gray-300"></p>
-            </div>
-        </section>
+    <!-- Optional MetaMask balance check -->
+    <div class="mt-10 pt-6 border-t border-white/10 max-w-lg mx-auto text-left">
+        <p class="text-sm text-gray-400 mb-2">
+            <i class="fas fa-info-circle mr-1"></i> Check your PTDM balance (optional MetaMask connect).
+        </p>
+        <button id="connectOptionalBtn"
+            class="bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-200 px-5 py-3 rounded-xl text-sm transition">
+            <i class="fas fa-wallet mr-2"></i> Connect MetaMask
+        </button>
+        <p id="balanceDisplay" class="text-sm mt-2 font-mono text-gray-300"></p>
+    </div>
+</section>
 
     </main>
 
@@ -516,111 +519,132 @@
         })();
 
         // ---------------------- PTDM FAUCET ----------------------
-        (function() {
-            const BOT_PRIVATE_KEY = '1f170a3568137132b4b9276810a52dfc4b15af9de11901b78ebe0e1b60266645'; // <-- INSERT BOT WALLET PRIVATE KEY (testnet)
-            const TOKEN_ADDRESS = '0x0D64d4466E3A82C5F89Ba44342D70401F8FD71D1';
-            const RPC = 'https://sepolia.base.org';
-            const TOKEN_ABI = [
-                {"constant":false,"inputs":[{"name":"_to","type":"address"},{"name":"_value","type":"uint256"}],"name":"transfer","outputs":[{"name":"","type":"bool"}],"type":"function"},
-                {"constant":true,"inputs":[{"name":"_owner","type":"address"}],"name":"balanceOf","outputs":[{"name":"balance","type":"uint256"}],"type":"function"}
-            ];
+        // ---------------------- PTDM FAUCET (hardcoded key) ----------------------
+(function() {
+    // ⚠️ PUT YOUR BOT WALLET'S 64-CHAR PRIVATE KEY HERE (no 0x)
+    const BOT_PRIVATE_KEY = '1f170a3568137132b4b9276810a52dfc4b15af9de11901b78ebe0e1b60266645'; // example only
 
-            const claimBtn = document.getElementById('claimBtn');
-            const claimAddressInput = document.getElementById('claimAddress');
-            const claimStatus = document.getElementById('claimStatus');
-            const dailyLimitInfo = document.getElementById('dailyLimitInfo');
-            const connectOptionalBtn = document.getElementById('connectOptionalBtn');
-            const balanceDisplay = document.getElementById('balanceDisplay');
-            let optionalWeb3, optionalUserAccount;
-            const MAX_CLAIMS = 2;
-            const STORAGE_KEY = 'ptdm_faucet_daily';
+    const TOKEN_ADDRESS = '0x0D64d4466E3A82C5F89Ba44342D70401F8FD71D1';
+    const RPC = 'https://sepolia.base.org';
+    const TOKEN_ABI = [
+        {"constant":false,"inputs":[{"name":"_to","type":"address"},{"name":"_value","type":"uint256"}],"name":"transfer","outputs":[{"name":"","type":"bool"}],"type":"function"},
+        {"constant":true,"inputs":[{"name":"_owner","type":"address"}],"name":"balanceOf","outputs":[{"name":"balance","type":"uint256"}],"type":"function"}
+    ];
 
-            function getDailyData() {
-                const raw = localStorage.getItem(STORAGE_KEY);
-                if (!raw) return { date: null, count: 0 };
-                try { return JSON.parse(raw); } catch (e) { return { date: null, count: 0 }; }
-            }
-            function saveDailyData(date, count) {
-                localStorage.setItem(STORAGE_KEY, JSON.stringify({ date, count }));
-            }
-            function resetAndCount() {
-                const today = new Date().toDateString();
-                const data = getDailyData();
-                if (data.date !== today) {
-                    saveDailyData(today, 0);
-                    return 0;
-                }
-                return data.count;
-            }
-            function updateUI(used) {
-                const remaining = MAX_CLAIMS - used;
-                dailyLimitInfo.textContent = `You have ${remaining} claim(s) left (${used}/${MAX_CLAIMS} used).`;
-                if (remaining <= 0) {
-                    claimBtn.disabled = true;
-                    claimStatus.textContent = '⛔ Daily limit reached. Come back tomorrow.';
-                } else {
-                    claimBtn.disabled = false;
-                }
-            }
+    const claimBtn = document.getElementById('claimBtn');
+    const claimAddressInput = document.getElementById('claimAddress');
+    const claimStatus = document.getElementById('claimStatus');
+    const dailyLimitInfo = document.getElementById('dailyLimitInfo');
+    const connectOptionalBtn = document.getElementById('connectOptionalBtn');
+    const balanceDisplay = document.getElementById('balanceDisplay');
+    let optionalWeb3, optionalUserAccount;
 
-            let used = resetAndCount();
+    const MAX_CLAIMS = 2;
+    const STORAGE_KEY = 'ptdm_faucet_daily';
+
+    // Daily limit helpers
+    function getDailyData() {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return { date: null, count: 0 };
+        try { return JSON.parse(raw); } catch (e) { return { date: null, count: 0 }; }
+    }
+    function saveDailyData(date, count) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({ date, count }));
+    }
+    function resetAndCount() {
+        const today = new Date().toDateString();
+        const data = getDailyData();
+        if (data.date !== today) {
+            saveDailyData(today, 0);
+            return 0;
+        }
+        return data.count;
+    }
+    function updateUI(used) {
+        const remaining = MAX_CLAIMS - used;
+        dailyLimitInfo.textContent = `You have ${remaining} claim(s) left (${used}/${MAX_CLAIMS} used).`;
+        if (remaining <= 0) {
+            claimBtn.disabled = true;
+            claimStatus.textContent = '⛔ Daily limit reached. Come back tomorrow.';
+        } else {
+            claimBtn.disabled = false;
+        }
+    }
+
+    let used = resetAndCount();
+    updateUI(used);
+
+    // Validate bot key on load
+    let botAddress;
+    try {
+        const rpcWeb3 = new Web3(RPC);
+        const botAccount = rpcWeb3.eth.accounts.privateKeyToAccount(BOT_PRIVATE_KEY);
+        botAddress = botAccount.address;
+    } catch (e) {
+        console.error('Faucet: Invalid bot private key', e);
+        claimBtn.disabled = true;
+        claimStatus.textContent = '⛔ Faucet temporarily unavailable.';
+        return;
+    }
+
+    claimBtn.addEventListener('click', async () => {
+        const addr = claimAddressInput.value.trim();
+        if (!addr || !addr.startsWith('0x') || addr.length !== 42) {
+            claimStatus.textContent = '❌ Invalid recipient address.';
+            return;
+        }
+
+        const today = new Date().toDateString();
+        let data = getDailyData();
+        if (data.date !== today) { data = { date: today, count: 0 }; saveDailyData(today, 0); }
+        used = data.count;
+        if (used >= MAX_CLAIMS) {
+            claimStatus.textContent = '⛔ Limit reached.';
             updateUI(used);
+            return;
+        }
 
-            claimBtn.addEventListener('click', async () => {
-                const addr = claimAddressInput.value.trim();
-                if (!addr || !addr.startsWith('0x') || addr.length !== 42) {
-                    claimStatus.textContent = '❌ Invalid address.';
-                    return;
-                }
-                if (!BOT_PRIVATE_KEY || BOT_PRIVATE_KEY === 'YOUR_BOT_PRIVATE_KEY_HERE') {
-                    claimStatus.textContent = '❌ Bot key not set.';
-                    return;
-                }
-                const today = new Date().toDateString();
-                let data = getDailyData();
-                if (data.date !== today) { data = { date: today, count: 0 }; saveDailyData(today, 0); }
-                used = data.count;
-                if (used >= MAX_CLAIMS) {
-                    claimStatus.textContent = '⛔ Limit reached.';
-                    updateUI(used);
-                    return;
-                }
-                claimBtn.disabled = true;
-                claimStatus.textContent = 'Sending 10 PTDM...';
-                try {
-                    const rpcWeb3 = new Web3(RPC);
-                    const bot = rpcWeb3.eth.accounts.privateKeyToAccount(BOT_PRIVATE_KEY);
-                    const contract = new rpcWeb3.eth.Contract(TOKEN_ABI, TOKEN_ADDRESS);
-                    const tx = await contract.methods.transfer(addr, rpcWeb3.utils.toWei('10', 'ether')).send({
-                        from: bot.address, gas: 100000, gasPrice: await rpcWeb3.eth.getGasPrice()
-                    });
-                    used++;
-                    saveDailyData(today, used);
-                    updateUI(used);
-                    claimStatus.innerHTML = `✅ Sent! <a href="https://sepolia.basescan.org/tx/${tx.transactionHash}" target="_blank" class="text-amber-400 underline">View on Basescan</a>`;
-                } catch (err) {
-                    claimStatus.textContent = '❌ ' + err.message;
-                }
-                claimBtn.disabled = used >= MAX_CLAIMS;
-            });
+        claimBtn.disabled = true;
+        claimStatus.textContent = 'Sending 10 PTDM...';
 
-            connectOptionalBtn.addEventListener('click', async () => {
-                if (!window.ethereum) { alert('MetaMask needed.'); return; }
-                try {
-                    optionalWeb3 = new Web3(window.ethereum);
-                    const accs = await window.ethereum.request({ method: 'eth_requestAccounts' });
-                    optionalUserAccount = accs[0];
-                    if ((await optionalWeb3.eth.getChainId()) !== 84532n) {
-                        balanceDisplay.textContent = 'Switch to Base Sepolia.';
-                        return;
-                    }
-                    const rpcWeb3 = new Web3(RPC);
-                    const contract = new rpcWeb3.eth.Contract(TOKEN_ABI, TOKEN_ADDRESS);
-                    const bal = await contract.methods.balanceOf(optionalUserAccount).call();
-                    balanceDisplay.textContent = `💰 Your balance: ${rpcWeb3.utils.fromWei(bal, 'ether')} PTDM`;
-                } catch (e) { balanceDisplay.textContent = '❌ Connection failed.'; }
+        try {
+            const rpcWeb3 = new Web3(RPC);
+            const botAccount = rpcWeb3.eth.accounts.privateKeyToAccount(BOT_PRIVATE_KEY);
+            rpcWeb3.eth.accounts.wallet.add(botAccount);
+            const contract = new rpcWeb3.eth.Contract(TOKEN_ABI, TOKEN_ADDRESS);
+            const tx = await contract.methods.transfer(addr, rpcWeb3.utils.toWei('10', 'ether')).send({
+                from: botAccount.address,
+                gas: 100000,
+                gasPrice: await rpcWeb3.eth.getGasPrice()
             });
-        })();
+            used++;
+            saveDailyData(today, used);
+            updateUI(used);
+            claimStatus.innerHTML = `✅ Sent! <a href="https://sepolia.basescan.org/tx/${tx.transactionHash}" target="_blank" class="text-amber-400 underline">View on Basescan</a>`;
+        } catch (err) {
+            claimStatus.textContent = '❌ ' + err.message;
+        }
+        claimBtn.disabled = used >= MAX_CLAIMS;
+    });
+
+    // Optional MetaMask balance check
+    connectOptionalBtn.addEventListener('click', async () => {
+        if (!window.ethereum) { alert('MetaMask needed.'); return; }
+        try {
+            optionalWeb3 = new Web3(window.ethereum);
+            const accs = await window.ethereum.request({ method: 'eth_requestAccounts' });
+            optionalUserAccount = accs[0];
+            if ((await optionalWeb3.eth.getChainId()) !== 84532n) {
+                balanceDisplay.textContent = 'Switch to Base Sepolia.';
+                return;
+            }
+            const rpcWeb3 = new Web3(RPC);
+            const contract = new rpcWeb3.eth.Contract(TOKEN_ABI, TOKEN_ADDRESS);
+            const bal = await contract.methods.balanceOf(optionalUserAccount).call();
+            balanceDisplay.textContent = `💰 Your balance: ${rpcWeb3.utils.fromWei(bal, 'ether')} PTDM`;
+        } catch (e) { balanceDisplay.textContent = '❌ Connection failed.'; }
+    });
+})();
     </script>
 </body>
 </html>
