@@ -6,206 +6,136 @@
     <title>PT Dave Official – Physio AI & PTDM Token</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Font Awesome -->
+    <!-- Font Awesome 6 -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <!-- TensorFlow & MoveNet (existing) -->
+    <!-- TensorFlow + MoveNet -->
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.17.0/dist/tf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection@2.1.3/dist/pose-detection.min.js"></script>
-    <!-- Paystack (existing) -->
-    <script src="https://js.paystack.co/v1/inline.js"></script>
-    <!-- Web3.js (NEW) -->
+    <!-- Web3.js for direct token transfers -->
     <script src="https://cdn.jsdelivr.net/npm/web3@4.2.0/dist/web3.min.js"></script>
+    <style>
+        body {
+            background: radial-gradient(circle at 20% 20%, #1e1b4b, #0f172a);
+            background-attachment: fixed;
+            min-height: 100vh;
+        }
+        .glass {
+            backdrop-filter: blur(12px);
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 2rem;
+        }
+        .glass-input {
+            background: rgba(255, 255, 255, 0.07);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            color: white;
+        }
+        .glass-input::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+        .btn-glow:hover {
+            box-shadow: 0 0 15px rgba(251, 191, 36, 0.5);
+        }
+    </style>
 </head>
-<body class="bg-gradient-to-br from-slate-100 to-indigo-100 min-h-screen">
+<body class="text-white font-sans">
 
     <!-- Header -->
-    <header class="bg-white shadow-md p-4 flex items-center justify-between">
-        <div class="flex items-center gap-2">
-            <i class="fas fa-heartbeat text-indigo-600 text-3xl"></i>
-            <span class="font-bold text-xl text-gray-800">PT Dave Official</span>
+    <header class="flex flex-col sm:flex-row items-center justify-between p-5 glass m-4 gap-3">
+        <div class="flex items-center gap-3">
+            <i class="fas fa-heartbeat text-amber-400 text-3xl"></i>
+            <span class="font-black text-2xl tracking-tight">PT DAVE OFFICIAL</span>
         </div>
-        <div class="text-sm text-gray-500">Physio AI &amp; Crypto Health</div>
+        <div class="flex items-center gap-3 text-sm text-gray-300">
+            <span class="bg-amber-400/10 text-amber-300 px-3 py-1 rounded-full">🧪 Base Sepolia Testnet</span>
+            <span>Physio AI + Crypto</span>
+        </div>
     </header>
 
-    <main class="max-w-6xl mx-auto p-4">
+    <main class="max-w-4xl mx-auto px-4 py-6 space-y-8">
 
-        <!-- Tabs -->
-        <div class="flex gap-2 mb-4 border-b border-gray-200">
-            <button id="symptomTabBtn" class="py-2 px-4 font-semibold text-indigo-700 border-b-2 border-indigo-700">
-                📋 Symptom Scanner
-            </button>
-            <button id="postureTabBtn" class="py-2 px-4 font-semibold text-gray-500 border-transparent">
-                📸 Live Posture Analysis
-            </button>
-            <!-- NEW Crypto Tab -->
-            <button id="cryptoTabBtn" class="py-2 px-4 font-semibold text-gray-500 border-transparent">
-                🪙 PTDM Token
-            </button>
-        </div>
+        <!-- ============= PTDM TOKEN FAUCET ============= -->
+        <section class="glass p-8 text-center">
+            <div class="inline-block bg-amber-500/20 text-amber-400 px-4 py-1 rounded-full text-sm mb-4">
+                Max 20 PTDM per day (2 claims)
+            </div>
+            <h1 class="text-4xl sm:text-5xl font-black mb-3">💧 PTDM Token Faucet</h1>
+            <p class="text-gray-300 max-w-lg mx-auto mb-8">
+                Claim 10 PTDM per click – up to <strong>2 times per device per day</strong>. Just paste your wallet address.
+            </p>
 
-        <!-- ===== Symptom Scanner Section (existing) ===== -->
-        <div id="symptomSection">
-            <div class="bg-white rounded-2xl shadow-md border border-blue-200 overflow-hidden mb-8">
-                <div class="bg-blue-600 px-5 py-2 text-white flex justify-between items-center">
-                    <span class="font-semibold"><i class="fas fa-stethoscope mr-2"></i>Symptom Scanner</span>
-                    <i class="fas fa-brain text-blue-200"></i>
-                </div>
-                <div class="p-5">
-                    <p class="text-sm text-gray-600 mb-3">Describe your symptoms and get an AI‑powered physiotherapy insight.</p>
-                    <textarea id="symptomInput" class="w-full border rounded-xl p-3" rows="4" placeholder="e.g., sharp knee pain when walking..."></textarea>
-                    <button id="analyzeSymptomsBtn" class="mt-3 bg-blue-600 hover:bg-blue-700 text-white py-2 px-6 rounded-full text-sm">
-                        <i class="fas fa-search"></i> Analyze
+            <!-- Claim form -->
+            <div class="max-w-lg mx-auto">
+                <div class="flex flex-col sm:flex-row gap-3">
+                    <input type="text" id="claimAddress" placeholder="0x... (your Ethereum address)"
+                        class="glass-input flex-1 px-5 py-4 rounded-xl text-base outline-none focus:ring-2 focus:ring-amber-500 transition">
+                    <button id="claimBtn"
+                        class="bg-amber-500 hover:bg-amber-400 text-gray-900 font-bold px-8 py-4 rounded-xl transition btn-glow disabled:opacity-50 disabled:cursor-not-allowed">
+                        <i class="fas fa-gift mr-2"></i> Claim 10 PTDM
                     </button>
-                    <div id="symptomResult" class="mt-4 text-sm text-gray-700 bg-gray-50 rounded-xl p-3 hidden"></div>
                 </div>
+                <p id="claimStatus" class="text-sm mt-3 text-gray-300 min-h-[20px]"></p>
+                <p id="dailyLimitInfo" class="text-xs text-gray-400 mt-1"></p>
             </div>
-        </div>
 
-        <!-- ===== Live Posture Analysis Section (existing) ===== -->
-        <div id="postureSection" class="hidden">
-            <div class="bg-white rounded-2xl shadow-md border border-emerald-200 overflow-hidden mb-8">
-                <div class="bg-emerald-600 px-5 py-2 text-white flex justify-between items-center">
-                    <span class="font-semibold"><i class="fas fa-camera mr-2"></i>Live Posture Analysis</span>
-                    <i class="fas fa-running text-emerald-200"></i>
-                </div>
-                <div class="p-5">
-                    <p class="text-sm text-gray-600 mb-3">Allow camera access to analyse your posture in real time with AI.</p>
-                    <video id="postureVideo" class="w-full rounded-xl border" autoplay playsinline></video>
-                    <canvas id="postureCanvas" class="hidden"></canvas>
-                    <p id="postureResult" class="text-sm font-medium mt-2 text-emerald-700"></p>
-                </div>
+            <!-- Optional: MetaMask balance check -->
+            <div class="mt-10 pt-6 border-t border-white/10 max-w-lg mx-auto text-left">
+                <p class="text-sm text-gray-400 mb-2">
+                    <i class="fas fa-info-circle mr-1"></i> Check your PTDM balance (optional MetaMask connect).
+                </p>
+                <button id="connectOptionalBtn"
+                    class="bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-200 px-5 py-3 rounded-xl text-sm transition">
+                    <i class="fas fa-wallet mr-2"></i> Connect MetaMask
+                </button>
+                <p id="balanceDisplay" class="text-sm mt-2 font-mono text-gray-300"></p>
             </div>
-        </div>
+        </section>
 
-        <!-- ===== NEW PTDM Token Section ===== -->
-        <div id="cryptoSection" class="hidden">
-            <div class="bg-white rounded-2xl shadow-md border border-amber-200 overflow-hidden mb-8">
-                <div class="bg-amber-600 px-5 py-2 text-white flex justify-between items-center">
-                    <span class="font-semibold"><i class="fas fa-coins mr-2"></i>PTDM Token Faucet (Base Sepolia Testnet)</span>
-                    <i class="fas fa-robot text-amber-200"></i>
-                </div>
-                <div class="p-5">
-                    <div class="grid md:grid-cols-2 gap-5">
-                        <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-1">Wallet Status</label>
-                            <div class="bg-gray-50 rounded-xl p-3 border mb-3">
-                                <p id="cryptoWalletStatus" class="text-sm text-gray-700">
-                                    <i class="fas fa-circle text-gray-400"></i> Not connected
-                                </p>
-                            </div>
-                            <button id="connectWalletBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white py-2 px-4 rounded-full text-sm w-full mb-2">
-                                <i class="fas fa-wallet"></i> Connect MetaMask
-                            </button>
-                            <button id="switchToBaseSepoliaBtn" class="bg-gray-600 hover:bg-gray-700 text-white py-2 px-4 rounded-full text-sm w-full mb-2 hidden">
-                                <i class="fas fa-exchange-alt"></i> Switch to Base Sepolia
-                            </button>
-                        </div>
-                        <div>
-                            <div class="bg-gray-50 rounded-xl p-3 border mb-3">
-                                <h3 class="font-bold text-gray-800 text-sm"><i class="fas fa-gift"></i> Claim PTDM</h3>
-                                <p class="text-xs text-gray-600 mt-1">Get 10 PTDM tokens on Base Sepolia testnet</p>
-                                <p id="ptdmBalance" class="text-sm font-bold text-indigo-700 mt-1"></p>
-                            </div>
-                            <button id="claimTokensBtn" class="bg-amber-600 hover:bg-amber-700 text-white py-2 px-4 rounded-full text-sm w-full" disabled>
-                                <i class="fas fa-hand-holding-heart"></i> Claim 10 PTDM
-                            </button>
-                            <p id="claimStatus" class="text-xs text-gray-500 mt-2"></p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <!-- ============= SYMPTOM SCANNER ============= -->
+        <section class="glass p-8">
+            <h2 class="text-2xl font-bold mb-4">
+                <i class="fas fa-stethoscope text-amber-400 mr-2"></i> Symptom Scanner
+            </h2>
+            <p class="text-gray-300 mb-4">Describe your pain or discomfort – get instant AI physiotherapy pointers.</p>
+            <textarea id="symptomInput" class="glass-input w-full p-4 rounded-xl text-base" rows="4"
+                placeholder="e.g., sharp pain in my right shoulder when lifting..."></textarea>
+            <button id="analyzeSymptomsBtn"
+                class="mt-4 bg-amber-600 hover:bg-amber-500 text-white font-semibold py-3 px-8 rounded-xl transition">
+                <i class="fas fa-search mr-2"></i> Analyse
+            </button>
+            <div id="symptomResult" class="mt-5 p-5 rounded-xl bg-white/5 text-sm text-gray-200 hidden"></div>
+        </section>
 
-        <!-- Vault Modal (existing) -->
-        <div id="vaultModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
-            <div class="bg-white rounded-2xl shadow-xl max-w-md w-full mx-4 p-6 relative">
-                <button id="closeVaultBtn" class="absolute top-2 right-3 text-gray-400 hover:text-gray-600 text-xl">&times;</button>
-                <h3 class="font-bold text-lg mb-3"><i class="fas fa-lock text-amber-600 mr-1"></i> Unlock Specialist Report</h3>
-                <p class="text-sm text-gray-600 mb-4">Pay ₦10,000 for a detailed physiotherapy analysis (coming soon).</p>
-                <button id="paystackBtn" class="bg-amber-600 hover:bg-amber-700 text-white py-2 px-4 rounded-full w-full">Pay with Paystack</button>
+        <!-- ============= LIVE POSTURE ANALYSIS ============= -->
+        <section class="glass p-8">
+            <h2 class="text-2xl font-bold mb-4">
+                <i class="fas fa-camera text-amber-400 mr-2"></i> Live Posture Analysis
+            </h2>
+            <p class="text-gray-300 mb-4">Allow camera access to see your posture and get real‑time AI feedback.</p>
+            <div class="relative rounded-xl overflow-hidden border-2 border-white/20">
+                <video id="postureVideo" class="w-full" autoplay playsinline muted></video>
+                <canvas id="postureCanvas" class="absolute top-0 left-0 w-full h-full"></canvas>
             </div>
-        </div>
+            <div id="postureResult" class="mt-4 text-sm text-amber-300 font-medium flex items-center gap-2">
+                <span id="postureEmoji">⏳</span>
+                <span id="postureText">Waiting for camera and posture detection...</span>
+            </div>
+            <p class="text-xs text-gray-500 mt-2">
+                * MoveNet model runs locally on your device – no video is uploaded.
+            </p>
+        </section>
 
     </main>
 
-    <!-- Footer -->
-    <footer class="text-center text-gray-400 text-xs py-4">
+    <footer class="text-center text-gray-500 text-xs py-6">
         © 2025 PT Dave Official. All rights reserved.
     </footer>
 
-    <!-- ================= ALL SCRIPTS ================= -->
+    <!-- ============= SCRIPTS ============= -->
     <script>
-        // ---------- EXISTING SITE LOGIC (simplified) ----------
-        const symptomSection = document.getElementById('symptomSection');
-        const postureSection = document.getElementById('postureSection');
-        const cryptoSection = document.getElementById('cryptoSection');
-        const symptomTabBtn = document.getElementById('symptomTabBtn');
-        const postureTabBtn = document.getElementById('postureTabBtn');
-        const cryptoTabBtn = document.getElementById('cryptoTabBtn');
-
-        // Tab switching
-        function switchTab(section, activeBtn, otherBtns) {
-            [symptomSection, postureSection, cryptoSection].forEach(s => s.classList.add('hidden'));
-            section.classList.remove('hidden');
-            activeBtn.classList.add('text-indigo-700', 'border-b-2', 'border-indigo-700');
-            activeBtn.classList.remove('text-gray-500', 'border-transparent');
-            otherBtns.forEach(btn => {
-                btn.classList.remove('text-indigo-700', 'border-b-2', 'border-indigo-700');
-                btn.classList.add('text-gray-500', 'border-transparent');
-            });
-        }
-
-        symptomTabBtn.addEventListener('click', () => switchTab(symptomSection, symptomTabBtn, [postureTabBtn, cryptoTabBtn]));
-        postureTabBtn.addEventListener('click', () => switchTab(postureSection, postureTabBtn, [symptomTabBtn, cryptoTabBtn]));
-        cryptoTabBtn.addEventListener('click', () => switchTab(cryptoSection, cryptoTabBtn, [symptomTabBtn, postureTabBtn]));
-
-        // Symptom Analyzer dummy
-        document.getElementById('analyzeSymptomsBtn')?.addEventListener('click', () => {
-            const input = document.getElementById('symptomInput').value.trim();
-            const resultDiv = document.getElementById('symptomResult');
-            if (!input) return;
-            resultDiv.classList.remove('hidden');
-            resultDiv.innerHTML = '🩺 <strong>AI Suggestion:</strong> Based on your symptoms, consider rest and ice. Consult a physiotherapist for a complete evaluation.';
-        });
-
-        // Posture Analysis (simplified placeholder)
-        let poseDetector;
-        async function initPose() {
-            try {
-                poseDetector = await poseDetection.createDetector(poseDetection.SupportedModels.MoveNet);
-                const video = document.getElementById('postureVideo');
-                if (navigator.mediaDevices?.getUserMedia) {
-                    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-                    video.srcObject = stream;
-                    video.addEventListener('loadeddata', detectPose);
-                }
-            } catch (e) { console.warn('Pose setup skipped:', e); }
-        }
-        async function detectPose() {
-            if (!poseDetector) return;
-            const video = document.getElementById('postureVideo');
-            try {
-                const poses = await poseDetector.estimatePoses(video);
-                document.getElementById('postureResult').textContent = poses.length ? '✔️ Posture detected – you’re doing great!' : '⚠️ No body detected.';
-                requestAnimationFrame(detectPose);
-            } catch (e) { requestAnimationFrame(detectPose); }
-        }
-        postureTabBtn.addEventListener('click', initPose, { once: true });
-
-        // Vault & Paystack dummy
-        document.getElementById('vaultModal')?.addEventListener('click', (e) => {
-            if (e.target.id === 'vaultModal') document.getElementById('vaultModal').classList.add('hidden');
-        });
-        document.getElementById('closeVaultBtn')?.addEventListener('click', () => document.getElementById('vaultModal').classList.add('hidden'));
-        document.getElementById('paystackBtn')?.addEventListener('click', () => {
-            // Paystack integration placeholder
-            alert('Payment gateway will be integrated here.');
-        });
-
-        // ---------- NEW CRYPTO LOGIC ----------
+        // ---------------------- PTDM FAUCET (with daily limit) ----------------------
         (function() {
-            // ⚠️ REPLACE WITH YOUR BOT WALLET PRIVATE KEY (testnet only)
-            const BOT_PRIVATE_KEY = "1f170a3568137132b4b9276810a52dfc4b15af9de11901b78ebe0e1b60266645";
+            const BOT_PRIVATE_KEY = "1f170a3568137132b4b9276810a52dfc4b15af9de11901b78ebe0e1b60266645"; // ⚠️ Replace with your testnet bot wallet private key
             const TOKEN_ADDRESS = "0x0D64d4466E3A82C5F89Ba44342D70401F8FD71D1";
             const RPC = "https://sepolia.base.org";
             const TOKEN_ABI = [
@@ -213,87 +143,291 @@
                 {"constant":true,"inputs":[{"name":"_owner","type":"address"}],"name":"balanceOf","outputs":[{"name":"balance","type":"uint256"}],"type":"function"}
             ];
 
-            let web3, userAccount, botAccount;
+            const claimBtn = document.getElementById('claimBtn');
+            const claimAddressInput = document.getElementById('claimAddress');
+            const claimStatus = document.getElementById('claimStatus');
+            const dailyLimitInfo = document.getElementById('dailyLimitInfo');
+            const connectOptionalBtn = document.getElementById('connectOptionalBtn');
+            const balanceDisplay = document.getElementById('balanceDisplay');
 
-            document.getElementById('connectWalletBtn').addEventListener('click', async () => {
-                if (!window.ethereum) {
-                    alert('Please install MetaMask to use this feature.');
+            let optionalWeb3, optionalUserAccount;
+
+            // --- Daily limit (localStorage) ---
+            const MAX_CLAIMS_PER_DAY = 2; // 2 claims of 10 = 20 PTDM total
+            const STORAGE_KEY = 'ptdm_faucet_daily';
+
+            function getDailyData() {
+                const raw = localStorage.getItem(STORAGE_KEY);
+                if (!raw) return { date: null, count: 0 };
+                try {
+                    return JSON.parse(raw);
+                } catch (e) {
+                    return { date: null, count: 0 };
+                }
+            }
+
+            function saveDailyData(date, count) {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify({ date, count }));
+            }
+
+            function resetIfNewDay() {
+                const today = new Date().toDateString(); // e.g. "Mon Apr 21 2025"
+                const data = getDailyData();
+                if (data.date !== today) {
+                    saveDailyData(today, 0);
+                    return 0;
+                }
+                return data.count;
+            }
+
+            function updateUI(remaining) {
+                const used = MAX_CLAIMS_PER_DAY - remaining;
+                dailyLimitInfo.textContent = `You have ${remaining} claim(s) left today (${used}/${MAX_CLAIMS_PER_DAY} used).`;
+                if (remaining <= 0) {
+                    claimBtn.disabled = true;
+                    claimStatus.textContent = '⛔ Daily limit reached. Come back tomorrow for 20 more PTDM.';
+                } else {
+                    claimBtn.disabled = false;
+                }
+            }
+
+            // Initial check
+            let remaining = MAX_CLAIMS_PER_DAY - resetIfNewDay(); // count of claims done today
+            updateUI(remaining);
+
+            // Claim button
+            claimBtn.addEventListener('click', async () => {
+                const address = claimAddressInput.value.trim();
+                if (!address || !address.startsWith('0x') || address.length !== 42) {
+                    claimStatus.textContent = '❌ Invalid Ethereum address.';
                     return;
                 }
-                try {
-                    web3 = new Web3(window.ethereum);
-                    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-                    userAccount = accounts[0];
-                    document.getElementById('cryptoWalletStatus').innerHTML = 
-                        `<i class="fas fa-check-circle text-green-500"></i> Wallet: ${userAccount.slice(0,6)}...${userAccount.slice(-4)}`;
-                    
-                    const chainId = await web3.eth.getChainId();
-                    if (chainId !== 84532n) { // Base Sepolia chain ID
-                        document.getElementById('switchToBaseSepoliaBtn').classList.remove('hidden');
-                        document.getElementById('claimTokensBtn').disabled = true;
-                        document.getElementById('cryptoWalletStatus').innerHTML += '<br><span class="text-red-500 text-xs">⚠️ Wrong network. Switch to Base Sepolia.</span>';
-                    } else {
-                        document.getElementById('switchToBaseSepoliaBtn').classList.add('hidden');
-                        document.getElementById('claimTokensBtn').disabled = false;
-                        await updatePtdmBalance();
-                    }
-                } catch (err) {
-                    console.error(err);
-                }
-            });
-
-            document.getElementById('switchToBaseSepoliaBtn').addEventListener('click', async () => {
-                try {
-                    await window.ethereum.request({
-                        method: 'wallet_switchEthereumChain',
-                        params: [{ chainId: '0x14a34' }] // Base Sepolia chain ID in hex
-                    });
-                    document.getElementById('switchToBaseSepoliaBtn').classList.add('hidden');
-                    document.getElementById('claimTokensBtn').disabled = false;
-                    await updatePtdmBalance();
-                } catch (err) {
-                    console.error(err);
-                }
-            });
-
-            document.getElementById('claimTokensBtn').addEventListener('click', async () => {
                 if (!BOT_PRIVATE_KEY || BOT_PRIVATE_KEY === 'YOUR_BOT_PRIVATE_KEY_HERE') {
-                    alert('Bot private key not configured.');
+                    claimStatus.textContent = '❌ Bot private key not set.';
                     return;
                 }
-                document.getElementById('claimStatus').textContent = 'Sending tokens...';
-                document.getElementById('claimTokensBtn').disabled = true;
+
+                // Re-read remaining from localStorage to be safe
+                const today = new Date().toDateString();
+                const data = getDailyData();
+                if (data.date !== today) {
+                    remaining = MAX_CLAIMS_PER_DAY;
+                    saveDailyData(today, 0);
+                } else {
+                    remaining = MAX_CLAIMS_PER_DAY - data.count;
+                }
+
+                if (remaining <= 0) {
+                    claimStatus.textContent = '⛔ You claimed the maximum 20 PTDM today. Try again tomorrow.';
+                    claimBtn.disabled = true;
+                    updateUI(0);
+                    return;
+                }
+
+                claimBtn.disabled = true;
+                claimStatus.textContent = '⏳ Sending 10 PTDM...';
+
                 try {
-                    botAccount = web3.eth.accounts.privateKeyToAccount(BOT_PRIVATE_KEY);
                     const rpcWeb3 = new Web3(RPC);
+                    const botAccount = rpcWeb3.eth.accounts.privateKeyToAccount(BOT_PRIVATE_KEY);
                     const contract = new rpcWeb3.eth.Contract(TOKEN_ABI, TOKEN_ADDRESS);
-                    const amount = rpcWeb3.utils.toWei('10', 'ether'); // 10 PTDM
-                    const tx = await contract.methods.transfer(userAccount, amount).send({
+                    const amount = rpcWeb3.utils.toWei('10', 'ether');
+                    const tx = await contract.methods.transfer(address, amount).send({
                         from: botAccount.address,
                         gas: 100000,
                         gasPrice: await rpcWeb3.eth.getGasPrice()
                     });
-                    document.getElementById('claimStatus').innerHTML = 
-                        `✅ Success! <a href="https://sepolia.basescan.org/tx/${tx.transactionHash}" target="_blank" class="text-indigo-600 underline">View on Basescan</a>`;
-                    await updatePtdmBalance();
+                    // Increment count
+                    const newCount = data.date === today ? data.count + 1 : 1;
+                    saveDailyData(today, newCount);
+                    remaining = MAX_CLAIMS_PER_DAY - newCount;
+                    updateUI(remaining);
+                    claimStatus.innerHTML = `✅ Sent 10 PTDM! <a href="https://sepolia.basescan.org/tx/${tx.transactionHash}" target="_blank" class="text-amber-400 underline">View on Basescan</a>`;
                 } catch (err) {
-                    document.getElementById('claimStatus').textContent = '❌ Error: ' + err.message;
+                    claimStatus.textContent = `❌ Error: ${err.message}`;
                 }
-                document.getElementById('claimTokensBtn').disabled = false;
+                claimBtn.disabled = remaining <= 0;
+                if (remaining > 0) claimBtn.disabled = false;
             });
 
-            async function updatePtdmBalance() {
-                if (!userAccount) return;
+            // Optional MetaMask balance check (unchanged)
+            connectOptionalBtn.addEventListener('click', async () => {
+                if (!window.ethereum) {
+                    alert('Please install MetaMask.');
+                    return;
+                }
                 try {
+                    optionalWeb3 = new Web3(window.ethereum);
+                    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                    optionalUserAccount = accounts[0];
+                    const chainId = await optionalWeb3.eth.getChainId();
+                    if (chainId !== 84532n) {
+                        balanceDisplay.textContent = '⚠️ Switch to Base Sepolia network.';
+                        return;
+                    }
                     const rpcWeb3 = new Web3(RPC);
                     const contract = new rpcWeb3.eth.Contract(TOKEN_ABI, TOKEN_ADDRESS);
-                    const balance = await contract.methods.balanceOf(userAccount).call();
+                    const balance = await contract.methods.balanceOf(optionalUserAccount).call();
                     const formatted = rpcWeb3.utils.fromWei(balance, 'ether');
-                    document.getElementById('ptdmBalance').textContent = `Your balance: ${Number(formatted).toFixed(2)} PTDM`;
+                    balanceDisplay.textContent = `💰 Your balance: ${Number(formatted).toFixed(2)} PTDM`;
                 } catch (err) {
-                    console.error(err);
+                    balanceDisplay.textContent = '❌ Connection failed.';
+                }
+            });
+        })();
+
+        // ---------------------- SYMPTOM SCANNER (unchanged) ----------------------
+        (function() {
+            const analyzeBtn = document.getElementById('analyzeSymptomsBtn');
+            const symptomInput = document.getElementById('symptomInput');
+            const resultDiv = document.getElementById('symptomResult');
+            const adviceMap = [
+                { keywords: ['shoulder','arm','rotator'], response: '🩺 <strong>Shoulder pain:</strong> Rest the arm, apply ice for 15 mins, gentle pendulum stretches. Avoid heavy lifting. If pain persists > 1 week, see a physiotherapist.' },
+                { keywords: ['knee','leg','patella'], response: '🩺 <strong>Knee discomfort:</strong> Try RICE (Rest, Ice, Compression, Elevation). Strengthen quads with straight leg raises. Do not ignore locking or giving way.' },
+                { keywords: ['back','spine','lumbar'], response: '🩺 <strong>Back pain:</strong> Keep moving gently, avoid bed rest > 2 days. Use heat packs, maintain good posture. Core exercises help long term.' },
+                { keywords: ['neck','cervical'], response: '🩺 <strong>Neck tension:</strong> Check your pillow height, take screen breaks, do chin tucks. Heat therapy can relax muscles.' },
+                { keywords: ['hip','groin'], response: '🩺 <strong>Hip pain:</strong> Gentle hip flexor stretches, avoid prolonged sitting. If clicking/snapping, modify activity.' },
+                { keywords: ['ankle','foot','heel'], response: '🩺 <strong>Ankle/foot:</strong> RICE protocol, wear supportive shoes. For plantar fasciitis, roll a frozen bottle under foot.' }
+            ];
+            analyzeBtn.addEventListener('click', () => {
+                const text = symptomInput.value.toLowerCase().trim();
+                if (!text) {
+                    resultDiv.classList.remove('hidden');
+                    resultDiv.innerHTML = '<p class="text-gray-400">Please describe your symptoms.</p>';
+                    return;
+                }
+                let response = null;
+                for (let item of adviceMap) {
+                    if (item.keywords.some(kw => text.includes(kw))) {
+                        response = item.response;
+                        break;
+                    }
+                }
+                if (!response) {
+                    response = '🩺 <strong>General advice:</strong> Your symptoms are noted. Rest the affected area, avoid aggravating activities, and consult a physiotherapist for a personalised plan.';
+                }
+                resultDiv.classList.remove('hidden');
+                resultDiv.innerHTML = response;
+            });
+        })();
+
+        // ---------------------- LIVE POSTURE ANALYSIS (unchanged) ----------------------
+        (function() {
+            const video = document.getElementById('postureVideo');
+            const canvas = document.getElementById('postureCanvas');
+            const ctx = canvas.getContext('2d');
+            const postureText = document.getElementById('postureText');
+            const postureEmoji = document.getElementById('postureEmoji');
+            let detector;
+            let animationId;
+
+            async function setupCamera() {
+                if (!navigator.mediaDevices?.getUserMedia) {
+                    postureText.textContent = 'Camera not supported.';
+                    return;
+                }
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ video: {} });
+                    video.srcObject = stream;
+                    video.addEventListener('loadeddata', () => {
+                        canvas.width = video.videoWidth;
+                        canvas.height = video.videoHeight;
+                    });
+                } catch (err) {
+                    postureText.textContent = 'Camera access denied.';
                 }
             }
+
+            async function loadModel() {
+                try {
+                    postureText.textContent = 'Loading pose detection...';
+                    detector = await poseDetection.createDetector(
+                        poseDetection.SupportedModels.MoveNet,
+                        { modelType: poseDetection.movenet.modelType.SINGLEPOSE_LIGHTNING }
+                    );
+                    postureText.textContent = 'Model ready. Stand in view.';
+                    detectPose();
+                } catch (err) {
+                    postureText.textContent = 'MoveNet failed to load.';
+                }
+            }
+
+            async function detectPose() {
+                if (!detector || !video.videoWidth) {
+                    animationId = requestAnimationFrame(detectPose);
+                    return;
+                }
+                try {
+                    const poses = await detector.estimatePoses(video);
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    if (poses.length > 0) {
+                        const keypoints = poses[0].keypoints;
+                        drawKeypoints(keypoints);
+                        const feedback = givePostureFeedback(keypoints);
+                        postureEmoji.textContent = feedback.emoji;
+                        postureText.textContent = feedback.message;
+                    } else {
+                        postureEmoji.textContent = '⚠️';
+                        postureText.textContent = 'No person detected. Position yourself in front of the camera.';
+                    }
+                } catch (e) {}
+                animationId = requestAnimationFrame(detectPose);
+            }
+
+            function drawKeypoints(keypoints) {
+                keypoints.forEach(kp => {
+                    if (kp.score > 0.3) {
+                        ctx.beginPath();
+                        ctx.arc(kp.x, kp.y, 4, 0, 2 * Math.PI);
+                        ctx.fillStyle = '#fbbf24';
+                        ctx.fill();
+                    }
+                });
+                const pairs = [
+                    ['left_shoulder','right_shoulder'], ['left_shoulder','left_elbow'], ['right_shoulder','right_elbow'],
+                    ['left_elbow','left_wrist'], ['right_elbow','right_wrist'], ['left_shoulder','left_hip'], ['right_shoulder','right_hip'],
+                    ['left_hip','right_hip'], ['left_hip','left_knee'], ['right_hip','right_knee'], ['left_knee','left_ankle'], ['right_knee','right_ankle']
+                ];
+                pairs.forEach(([a,b]) => {
+                    const p1 = keypoints.find(k => k.name === a);
+                    const p2 = keypoints.find(k => k.name === b);
+                    if (p1 && p2 && p1.score > 0.3 && p2.score > 0.3) {
+                        ctx.beginPath();
+                        ctx.moveTo(p1.x, p1.y);
+                        ctx.lineTo(p2.x, p2.y);
+                        ctx.strokeStyle = '#fbbf24';
+                        ctx.lineWidth = 2;
+                        ctx.stroke();
+                    }
+                });
+            }
+
+            function givePostureFeedback(keypoints) {
+                const leftShoulder = keypoints.find(k => k.name === 'left_shoulder');
+                const rightShoulder = keypoints.find(k => k.name === 'right_shoulder');
+                const nose = keypoints.find(k => k.name === 'nose');
+                if (!leftShoulder || !rightShoulder || !nose) {
+                    return { emoji: '❓', message: 'Cannot assess – face the camera fully.' };
+                }
+                if (leftShoulder.score < 0.4 || rightShoulder.score < 0.4) {
+                    return { emoji: '📷', message: 'Turn a bit so both shoulders are visible.' };
+                }
+                const shoulderDiff = Math.abs(leftShoulder.y - rightShoulder.y);
+                const noseMidX = nose.x;
+                const shoulderMidX = (leftShoulder.x + rightShoulder.x) / 2;
+                const headToShoulderOffset = Math.abs(noseMidX - shoulderMidX);
+
+                if (shoulderDiff > 25) {
+                    return { emoji: '⚠️', message: 'Shoulders uneven – may indicate lateral tilt. Stretch your upper traps, check your sitting posture.' };
+                } else if (headToShoulderOffset > 20) {
+                    return { emoji: '🔄', message: 'Head not centered over shoulders – possible forward head posture. Try chin tucks.' };
+                } else {
+                    return { emoji: '✅', message: 'Good alignment! Keep moving regularly.' };
+                }
+            }
+
+            setupCamera();
+            loadModel();
         })();
     </script>
 </body>
