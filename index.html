@@ -16,25 +16,93 @@
     <!-- Paystack -->
     <script src="https://js.paystack.co/v1/inline.js"></script>
     <style>
-    /* ---------- FULL PAGE CLINIC BACKGROUND ---------- */
+    /* ---------- ANIMATED CLINIC BACKGROUND (High‑Tech Physio) ---------- */
     body {
-        background: url('https://images.unsplash.com/photo-1666214280557-f1b5022eb64b?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80') no-repeat center center fixed;
-        background-size: cover;
+        background: radial-gradient(ellipse at 30% 50%, #0a3d40 0%, #062a2c 40%, #021c1e 100%);
         min-height: 100vh;
         position: relative;
+        overflow-x: hidden;
     }
 
-    /* Subtle dark overlay to keep white text readable */
-    body::before {
+    /* --- Dark overlay for readability --- */
+    body::after {
         content: "";
         position: fixed;
         top: 0; left: 0; width: 100%; height: 100%;
-        background: rgba(0, 0, 0, 0.5);
+        background: rgba(0, 0, 0, 0.45);
+        z-index: 0;
+        pointer-events: none;
+    }
+
+    /* --- Moving ECG line --- */
+    body::before {
+        content: "";
+        position: fixed;
+        top: 50%;
+        left: -50%;
+        width: 200%;
+        height: 4px;
+        background: repeating-linear-gradient(
+            to right,
+            transparent 0px,
+            transparent 30px,
+            #00ffe0 30px,
+            #00ffe0 34px,
+            transparent 34px,
+            transparent 70px,
+            #00ffe0 70px,
+            #00ffe0 72px,
+            transparent 72px,
+            transparent 100px,
+            #00ffe0 100px,
+            #00ffe0 104px,
+            transparent 104px
+        );
+        box-shadow: 0 0 20px #00ffe0, 0 0 40px #00ffe0;
+        animation: ecgMove 4s linear infinite;
+        z-index: 0;
+        opacity: 0.5;
+    }
+
+    @keyframes ecgMove {
+        0% { transform: translateX(0); }
+        100% { transform: translateX(-50%); }
+    }
+
+    /* --- Floating particles (tech sensors) --- */
+    .clinic-particles {
+        position: fixed;
+        top: 0; left: 0; width: 100%; height: 100%;
+        pointer-events: none;
         z-index: 0;
     }
 
-    /* Everything above overlay */
-    body > * {
+    .clinic-particles span {
+        position: absolute;
+        display: block;
+        width: 6px;
+        height: 6px;
+        background: rgba(0, 255, 255, 0.4);
+        border-radius: 50%;
+        box-shadow: 0 0 10px #00ffe0, 0 0 20px #00ffe0;
+        animation: floatUp 10s infinite ease-in;
+    }
+
+    .clinic-particles span:nth-child(1){ left: 5%; bottom: -10px; animation-delay: 0s; animation-duration: 12s; }
+    .clinic-particles span:nth-child(2){ left: 20%; bottom: -10px; animation-delay: 3s; animation-duration: 9s; }
+    .clinic-particles span:nth-child(3){ left: 40%; bottom: -10px; animation-delay: 6s; animation-duration: 11s; }
+    .clinic-particles span:nth-child(4){ left: 60%; bottom: -10px; animation-delay: 1s; animation-duration: 8s; }
+    .clinic-particles span:nth-child(5){ left: 80%; bottom: -10px; animation-delay: 4s; animation-duration: 13s; }
+    .clinic-particles span:nth-child(6){ left: 95%; bottom: -10px; animation-delay: 7s; animation-duration: 10s; }
+
+    @keyframes floatUp {
+        0% { transform: translateY(0) scale(1); opacity: 0.7; }
+        50% { opacity: 0.4; transform: translateY(-40vh) scale(0.8); }
+        100% { transform: translateY(-100vh) scale(0.3); opacity: 0; }
+    }
+
+    /* --- Ensure content is above background and overlay --- */
+    header, main, footer, .modal {
         position: relative;
         z-index: 1;
     }
@@ -43,24 +111,24 @@
     .glass {
         backdrop-filter: blur(15px);
         background: rgba(255, 255, 255, 0.06);
-        border: 1px solid rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.12);
         border-radius: 2rem;
     }
     .glass-input {
         background: rgba(255, 255, 255, 0.1);
-        border: 1px solid rgba(255, 255, 255, 0.18);
+        border: 1px solid rgba(255, 255, 255, 0.2);
         color: white;
     }
     .glass-input::placeholder {
         color: rgba(255, 255, 255, 0.55);
     }
     .btn-glow:hover {
-        box-shadow: 0 0 20px rgba(251, 191, 36, 0.55);
+        box-shadow: 0 0 25px rgba(0, 255, 255, 0.5);
     }
 
-    /* ---------- FAUCET SECTION WITH YOUR IMAGE (optional later) ---------- */
+    /* ---------- FAUCET SECTION ---------- */
     #faucetSection {
-        background: rgba(0, 0, 0, 0.25);  /* slightly darker for the token area */
+        background: rgba(0, 150, 150, 0.1);
     }
 
     /* ---------- MODAL ---------- */
@@ -74,13 +142,16 @@
         display: none !important;
     }
 
-    /* Make sure text is always clear */
+    /* Sharper text */
     h1, h2, h3, p, span, button, label, input {
-        text-shadow: 0 1px 3px rgba(0,0,0,0.6);
+        text-shadow: 0 1px 3px rgba(0,0,0,0.5);
     }
 </style>
 </head>
 <body class="text-white font-sans">
+   <div class="clinic-particles">
+    <span></span><span></span><span></span><span></span><span></span><span></span>
+</div> 
 
     <!-- Header -->
     <header class="flex flex-col sm:flex-row items-center justify-between p-5 glass m-4 gap-3">
